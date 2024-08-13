@@ -530,6 +530,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::AddBid {
@@ -601,6 +604,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Delegate {
@@ -656,7 +662,7 @@ mod transaction {
         let public_key_cl = &CLValue::from_t(&public_key).unwrap();
         let amount_cl = &CLValue::from_t(amount).unwrap();
 
-        let transaction_string_params = TransactionStrParams {
+        let transaction_str_params = TransactionStrParams {
             secret_key: "",
             timestamp: "",
             ttl: "30min",
@@ -671,7 +677,11 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
+        let transaction_string_params = transaction_str_params;
 
         let transaction_builder_params =
             TransactionBuilderParams::WithdrawBid { public_key, amount };
@@ -731,6 +741,9 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Undelegate {
@@ -807,6 +820,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Redelegate {
@@ -888,11 +904,15 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_hash.into(),
             entry_point: "test-entry-point",
+            runtime: TransactionRuntime::VmCasperV1,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -941,11 +961,15 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             additional_computation_factor: "",
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias: "alias",
             entry_point: "entry-point-alias",
+            runtime: TransactionRuntime::VmCasperV1,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -998,12 +1022,16 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             additional_computation_factor: "",
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(),
             entry_point,
             maybe_entity_version,
+            runtime: TransactionRuntime::VmCasperV1,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1053,12 +1081,16 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::PackageAlias {
             package_alias: &package_name,
             entry_point,
             maybe_entity_version,
+            runtime: TransactionRuntime::VmCasperV1,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1105,11 +1137,15 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
+            runtime: TransactionRuntime::VmCasperV1,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1165,6 +1201,9 @@ mod transaction {
             additional_computation_factor: "1",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Transfer {
@@ -1223,6 +1262,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
         let transaction_builder_params = TransactionBuilderParams::Transfer {
             maybe_source: Default::default(),
@@ -1262,6 +1304,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
@@ -1296,6 +1341,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            gas_limit: "",
+            session_entry_point: None,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),

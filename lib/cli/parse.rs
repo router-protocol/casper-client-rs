@@ -974,6 +974,32 @@ pub(super) fn pricing_mode(
                 receipt: maybe_receipt.unwrap_or_default(),
             })
         }
+        "gas-limited" => {
+            if maybe_gas_limit.is_empty() {
+                return Err(CliError::InvalidArgument {
+                    context: "pricing_mode",
+                    error: "Gas limited pricing mode requires a provided gas limit".to_string(),
+                });
+            }
+            let gas_limit =
+                maybe_gas_limit
+                    .parse::<u64>()
+                    .map_err(|error| CliError::FailedToParseInt {
+                        context: "gas_limit",
+                        error,
+                    })?;
+            let gas_price_tolerance =
+                maybe_gas_price_tolerance_str
+                    .parse::<u8>()
+                    .map_err(|error| CliError::FailedToParseInt {
+                        context: "gas_price_tolerance",
+                        error,
+                    })?;
+            Ok(PricingMode::GasLimited {
+                gas_limit,
+                gas_price_tolerance,
+            })
+        }
         _ => Err(CliError::InvalidArgument {
             context: "pricing_mode",
             error: "Invalid pricing mode identifier".to_string(),
@@ -1807,6 +1833,7 @@ mod tests {
         fn should_parse_fixed_pricing_mode_identifier() {
             let pricing_mode_str = "fixed";
             let payment_amount = "";
+            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "1";
             let standard_payment = "";
@@ -1881,6 +1908,7 @@ mod tests {
             let pricing_mode_str = "classic";
             let payment_amount = "10";
             let standard_payment = "true";
+            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "0";
             let parsed = pricing_mode(
@@ -1907,6 +1935,7 @@ mod tests {
             let pricing_mode_str = "invalid";
             let payment_amount = "10";
             let standard_payment = "true";
+            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "0";
             let parsed = pricing_mode(
@@ -1945,6 +1974,7 @@ mod tests {
             let pricing_mode_str = "classic";
             let payment_amount = "";
             let standard_payment = "true";
+            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "0";
             let parsed = pricing_mode(

@@ -59,7 +59,8 @@ uint = "0.9.5"
 tempfile = "3.8.1"
 
 [patch.crates-io]
-casper-types = { version = "5.0.0", git = "https://github.com/casper-network/casper-node", branch = "feat-2.0" }
+#casper-types = { git = "https://github.com/mpapierski/casper-node.git", branch = "new-execution-engine" }
+casper-types = { path = "../casper-node/types" }
 
 [package.metadata.deb]
 features = ["vendored-openssl"]

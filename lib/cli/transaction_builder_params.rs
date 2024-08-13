@@ -1,5 +1,9 @@
 use casper_types::bytesrepr::Bytes;
 use casper_types::{AddressableEntityHash, PackageHash, PublicKey, TransferTarget, URef, U512};
+use casper_types::{
+    AddressableEntityHash, PackageHash, PublicKey, TransactionCategory, TransactionRuntime,
+    TransferTarget, URef, U512,
+};
 
 /// An enum representing the parameters needed to construct a transaction builder
 /// for the commands concerning the creation of a transaction
@@ -54,6 +58,8 @@ pub enum TransactionBuilderParams<'a> {
         entity_hash: AddressableEntityHash,
         /// The entry point for the invocable entity transaction
         entry_point: &'a str,
+        /// Transaction Runtime.
+        runtime: TransactionRuntime,
     },
     /// Parameters for the invocable entity alias variant of the transaction builder
     InvocableEntityAlias {
@@ -61,6 +67,8 @@ pub enum TransactionBuilderParams<'a> {
         entity_alias: &'a str,
         /// The entry_point for the invocable entity alias transaction
         entry_point: &'a str,
+        /// Transaction Runtime.
+        runtime: TransactionRuntime,
     },
     /// Parameters for the package variant of the transaction builder
     Package {
@@ -70,6 +78,8 @@ pub enum TransactionBuilderParams<'a> {
         maybe_entity_version: Option<u32>,
         /// The entry_point for the package transaction
         entry_point: &'a str,
+        /// Transaction Runtime.
+        runtime: TransactionRuntime,
     },
     /// Parameters for the package alias variant of the transaction builder
     PackageAlias {
@@ -79,6 +89,8 @@ pub enum TransactionBuilderParams<'a> {
         maybe_entity_version: Option<u32>,
         /// The entry point for the package alias transaction
         entry_point: &'a str,
+        /// Transaction Runtime.
+        runtime: TransactionRuntime,
     },
     /// Parameters for the session variant of the transaction builder
     Session {
@@ -86,6 +98,8 @@ pub enum TransactionBuilderParams<'a> {
         is_install_upgrade: bool,
         /// The Bytes to be run by the execution engine for the session transaction
         transaction_bytes: Bytes,
+        /// Transaction Runtime.
+        runtime: TransactionRuntime,
     },
     /// Parameters for the transfer variant of the transaction builder
     Transfer {

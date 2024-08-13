@@ -30,6 +30,8 @@ pub(super) enum DisplayOrder {
     TransferId,
     Timestamp,
     Ttl,
+    TransactionCategory,
+    TransferredValue,
     ChainName,
     MaximumDelegationRate,
     MinimumDelegationRate,
@@ -44,11 +46,13 @@ pub(super) enum DisplayOrder {
     EntityAlias,
     PaymentAmount,
     PricingMode,
+    TransactionRuntime,
     StandardPayment,
     Receipt,
     GasPriceTolerance,
     AdditionalComputationFactor,
     IsInstallUpgrade,
+    GasLimit,
     TransactionAmount,
     Validator,
     NewValidator,
@@ -407,6 +411,35 @@ pub(super) mod gas_price_tolerance {
     }
 }
 
+pub(super) mod gas_limit {
+    use super::*;
+    pub(in crate::transaction) const ARG_NAME: &str = "gas-limit";
+
+    const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
+
+    const ARG_ALIAS: &str = "gas-limit";
+    const ARG_SHORT: char = 'l';
+    const ARG_HELP: &str =
+        "The maximum amount of gas the user is willing to pay for the transaction";
+
+    pub(in crate::transaction) fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .alias(ARG_ALIAS)
+            .short(ARG_SHORT)
+            .required(true)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::GasPriceTolerance as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default()
+    }
+}
 pub(super) mod transfer_amount {
     use super::*;
     pub(in crate::transaction) const ARG_NAME: &str = "transfer-amount";
@@ -460,25 +493,28 @@ pub(super) mod pricing_mode {
         Classic,
         Reserved,
         Fixed,
+        GasLimited,
     }
 
     impl PricingMode {
         const CLASSIC: &'static str = "classic";
         const RESERVED: &'static str = "reserved";
         const FIXED: &'static str = "fixed";
+        const GAS_LIMITED: &'static str = "gas-limited";
 
         pub(crate) fn as_str(&self) -> &str {
             match self {
                 Self::Classic => Self::CLASSIC,
                 Self::Reserved => Self::RESERVED,
                 Self::Fixed => Self::FIXED,
+                Self::GasLimited => Self::GAS_LIMITED,
             }
         }
     }
 
     impl ValueEnum for PricingMode {
         fn value_variants<'a>() -> &'a [Self] {
-            &[Self::Classic, Self::Reserved, Self::Fixed]
+            &[Self::Classic, Self::Reserved, Self::Fixed, Self::GasLimited]
         }
 
         fn to_possible_value(&self) -> Option<PossibleValue> {
@@ -486,6 +522,7 @@ pub(super) mod pricing_mode {
                 Self::Classic => PossibleValue::new(PricingMode::CLASSIC),
                 Self::Reserved => PossibleValue::new(PricingMode::RESERVED),
                 Self::Fixed => PossibleValue::new(PricingMode::FIXED),
+                Self::GasLimited => PossibleValue::new(PricingMode::GAS_LIMITED),
             })
         }
     }
@@ -498,6 +535,7 @@ pub(super) mod pricing_mode {
                 PricingMode::CLASSIC => Ok(Self::Classic),
                 PricingMode::RESERVED => Ok(Self::Reserved),
                 PricingMode::FIXED => Ok(Self::Fixed),
+                PricingMode::GAS_LIMITED => Ok(Self::GasLimited),
                 _ => Err(format!("'{}' is not a valid pricing option", s)),
             }
         }
@@ -537,6 +575,86 @@ pub(super) mod additional_computation_factor {
             .get_one::<String>(ARG_NAME)
             .map(String::as_str)
             .unwrap_or_default()
+    }
+}
+
+pub(super) mod transaction_runtime {
+    use super::*;
+    use clap::{builder::PossibleValue, value_parser, ValueEnum};
+    use std::str::FromStr;
+
+    pub(in crate::transaction) const ARG_NAME: &str = "transaction-runtime";
+
+    const ARG_VALUE_NAME: &str = "vm-casper-v1|vm-casper-v2";
+    const ARG_HELP: &str = "Transaction runtime";
+    const ARG_DEFAULT: &str = TransactionRuntime::VM_CASPER_V2;
+
+    pub(in crate::transaction) fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(false)
+            .value_name(ARG_VALUE_NAME)
+            .default_value(ARG_DEFAULT)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::PricingMode as usize)
+            .value_parser(value_parser!(TransactionRuntime))
+    }
+
+    #[derive(Debug, Clone, Copy, Default)]
+    pub enum TransactionRuntime {
+        #[default]
+        VmCasperV1,
+        VmCasperV2,
+    }
+
+    impl From<TransactionRuntime> for casper_types::TransactionRuntime {
+        fn from(runtime: TransactionRuntime) -> Self {
+            match runtime {
+                TransactionRuntime::VmCasperV1 => casper_types::TransactionRuntime::VmCasperV1,
+                TransactionRuntime::VmCasperV2 => casper_types::TransactionRuntime::VmCasperV2,
+            }
+        }
+    }
+
+    impl TransactionRuntime {
+        const VM_CASPER_V1: &'static str = "vm-casper-v1";
+        const VM_CASPER_V2: &'static str = "vm-casper-v2";
+
+        pub(crate) fn as_str(&self) -> &str {
+            match self {
+                Self::VmCasperV1 => Self::VM_CASPER_V1,
+                Self::VmCasperV2 => Self::VM_CASPER_V2,
+            }
+        }
+    }
+
+    impl ValueEnum for TransactionRuntime {
+        fn value_variants<'a>() -> &'a [Self] {
+            &[Self::VmCasperV1, Self::VmCasperV2]
+        }
+
+        fn to_possible_value(&self) -> Option<PossibleValue> {
+            Some(match self {
+                Self::VmCasperV1 => PossibleValue::new(TransactionRuntime::VM_CASPER_V1),
+                Self::VmCasperV2 => PossibleValue::new(TransactionRuntime::VM_CASPER_V2),
+            })
+        }
+    }
+
+    impl FromStr for TransactionRuntime {
+        type Err = String;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().as_str() {
+                Self::VM_CASPER_V1 => Ok(Self::VmCasperV1),
+                Self::VM_CASPER_V2 => Ok(Self::VmCasperV2),
+                _ => Err(format!("'{}' is not a valid transaction runtime", s)),
+            }
+        }
+    }
+
+    pub fn get(matches: &ArgMatches) -> Option<&TransactionRuntime> {
+        matches.get_one(ARG_NAME)
     }
 }
 
@@ -745,6 +863,34 @@ pub(super) mod is_install_upgrade {
     }
 }
 
+pub(super) mod transferred_value {
+    use std::str::FromStr;
+
+    use casper_types::TransactionCategory;
+    use clap::{value_parser, ValueEnum};
+
+    use super::*;
+
+    const ARG_NAME: &str = "transferred-value";
+    const ARG_SHORT: char = 't';
+    const ARG_VALUE_NAME: &str = "integer";
+    const ARG_HELP: &str = "Transferred token value";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .required(true)
+            .long(ARG_NAME)
+            .short(ARG_SHORT)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::TransferredValue as usize)
+    }
+
+    pub(super) fn get(matches: &ArgMatches) -> Option<&String> {
+        matches.get_one(ARG_NAME)
+    }
+}
+
 pub(super) mod public_key {
     use super::*;
     use casper_client::cli::CliError;
@@ -888,11 +1034,8 @@ pub(super) mod session_entry_point {
             .display_order(DisplayOrder::SessionEntryPoint as usize)
     }
 
-    pub fn get(matches: &ArgMatches) -> &str {
-        matches
-            .get_one::<String>(ARG_NAME)
-            .map(String::as_str)
-            .unwrap_or_default()
+    pub fn get(matches: &ArgMatches) -> Option<&str> {
+        matches.get_one::<String>(ARG_NAME).map(String::as_str)
     }
 }
 
@@ -1481,12 +1624,14 @@ pub(super) mod invocable_entity {
 
         let entity_addr_str = entity_addr::get(matches)?;
         let entity_addr = entity_addr::parse_entity_addr(entity_addr_str)?;
+        let runtime = transaction_runtime::get(matches);
 
-        let entry_point = session_entry_point::get(matches);
+        let entry_point = session_entry_point::get(matches).unwrap_or_default();
 
         let params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_addr.into(), // TODO: Skip `entity_addr` and match directly for hash?
             entry_point,
+            runtime: runtime.cloned().unwrap_or_default().into(),
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1528,11 +1673,16 @@ pub(super) mod invocable_entity_alias {
         show_json_args_examples_and_exit_if_required(matches);
 
         let entity_alias = entity_alias_arg::get(matches);
-        let entry_point = session_entry_point::get(matches);
+        let entry_point = session_entry_point::get(matches).unwrap_or_default();
+        let runtime = transaction_runtime::get(matches)
+            .cloned()
+            .unwrap_or_default()
+            .into();
 
         let params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
             entry_point,
+            runtime,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1576,13 +1726,18 @@ pub(super) mod package {
         let maybe_package_addr_str = package_addr::get(matches);
         let package_addr = package_addr::parse_package_addr(maybe_package_addr_str)?;
         let maybe_entity_version = session_version::get(matches);
+        let runtime = transaction_runtime::get(matches)
+            .cloned()
+            .unwrap_or_default()
+            .into();
 
-        let entry_point = session_entry_point::get(matches);
+        let entry_point = session_entry_point::get(matches).unwrap_or_default();
 
         let params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
             maybe_entity_version,
             entry_point,
+            runtime,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1628,12 +1783,17 @@ pub(super) mod package_alias {
 
         let maybe_entity_version = session_version::get(matches);
 
-        let entry_point = session_entry_point::get(matches);
+        let entry_point = session_entry_point::get(matches).unwrap_or_default();
+        let runtime = transaction_runtime::get(matches)
+            .cloned()
+            .unwrap_or_default()
+            .into();
 
         let params = TransactionBuilderParams::PackageAlias {
             package_alias,
             maybe_entity_version,
             entry_point,
+            runtime,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1690,9 +1850,18 @@ pub(super) mod session {
 
         let is_install_upgrade: bool = is_install_upgrade::get(matches);
 
+        let runtime = transaction_runtime::get(matches)
+            .cloned()
+            .unwrap_or_default()
+            .into();
+
+        let entrypoint = session_entry_point::get(matches);
+
         let params = TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
+            transaction_category: transaction_category.into_transaction_v1_category(),
+            runtime,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1705,6 +1874,10 @@ pub(super) mod session {
             .arg(is_install_upgrade::arg(
                 DisplayOrder::IsInstallUpgrade as usize,
             ))
+            .arg(transaction_category::arg())
+            .arg(transaction_runtime::arg())
+            .arg(gas_limit::arg())
+            .arg(transferred_value::arg())
     }
 }
 
@@ -1886,9 +2059,11 @@ pub(super) fn build_transaction_str_params(
     let payment_amount = payment_amount::get(matches);
     let receipt = receipt::get(matches);
     let standard_payment = standard_payment::get(matches);
+    let gas_limit = gas_limit::get(matches);
 
     let maybe_output_path = output::get(matches).unwrap_or_default();
     let initiator_addr = initiator_address::get(matches);
+    let session_entry_point = session_entry_point::get(matches);
 
     if obtain_session_args {
         let session_args_simple = arg_simple::session::get(matches);
@@ -1908,6 +2083,11 @@ pub(super) fn build_transaction_str_params(
             additional_computation_factor,
             receipt,
             standard_payment,
+            transferred_value: transferred_value::get(matches)
+                .map(|tv| tv.as_str())
+                .unwrap_or_default(),
+            gas_limit,
+            session_entry_point,
         }
     } else {
         TransactionStrParams {

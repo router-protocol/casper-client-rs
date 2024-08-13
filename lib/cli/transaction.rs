@@ -57,6 +57,7 @@ pub fn create_transaction(
             transaction_params.payment_amount,
             transaction_params.gas_price_tolerance,
             transaction_params.additional_computation_factor,
+            transaction_params.gas_limit,
             transaction_params.standard_payment,
             Some(digest),
         )?
@@ -66,6 +67,7 @@ pub fn create_transaction(
             transaction_params.payment_amount,
             transaction_params.gas_price_tolerance,
             transaction_params.additional_computation_factor,
+            transaction_params.gas_limit,
             transaction_params.standard_payment,
             None,
         )?
@@ -81,6 +83,11 @@ pub fn create_transaction(
     if !args.is_empty() {
         transaction_builder = transaction_builder.with_runtime_args(args);
     }
+
+    if let Some(session_entry_point) = transaction_params.session_entry_point {
+        transaction_builder = transaction_builder.with_entry_point(session_entry_point);
+    }
+
     if let Some(secret_key) = &maybe_secret_key {
         transaction_builder = transaction_builder.with_secret_key(secret_key);
     }
@@ -91,6 +98,7 @@ pub fn create_transaction(
     }
 
     let txn = transaction_builder.build().map_err(crate::Error::from)?;
+    dbg!(&txn);
     Ok(txn)
 }
 
@@ -264,19 +272,25 @@ pub fn make_transaction_builder(
         TransactionBuilderParams::InvocableEntity {
             entity_hash,
             entry_point,
+            runtime,
         } => {
-            let transaction_builder =
-                TransactionV1Builder::new_targeting_invocable_entity(entity_hash, entry_point);
+            let transaction_builder = TransactionV1Builder::new_targeting_invocable_entity(
+                entity_hash,
+                entry_point,
+                runtime,
+            );
             Ok(transaction_builder)
         }
         TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
             entry_point,
+            runtime,
         } => {
             let transaction_builder =
                 TransactionV1Builder::new_targeting_invocable_entity_via_alias(
                     entity_alias,
                     entry_point,
+                    runtime,
                 );
             Ok(transaction_builder)
         }
@@ -284,11 +298,13 @@ pub fn make_transaction_builder(
             package_hash,
             maybe_entity_version,
             entry_point,
+            runtime,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_package(
                 package_hash,
                 maybe_entity_version,
                 entry_point,
+                runtime,
             );
             Ok(transaction_builder)
         }
@@ -296,20 +312,26 @@ pub fn make_transaction_builder(
             package_alias,
             maybe_entity_version,
             entry_point,
+            runtime,
         } => {
-            let transaction_builder = TransactionV1Builder::new_targeting_package_via_alias(
-                package_alias,
-                maybe_entity_version,
-                entry_point,
-            );
+            let new_targeting_package_via_alias =
+                TransactionV1Builder::new_targeting_package_via_alias(
+                    package_alias,
+                    maybe_entity_version,
+                    entry_point,
+                    runtime,
+                );
+            let transaction_builder = new_targeting_package_via_alias;
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
+            transaction_category,
+            runtime,
         } => {
             let transaction_builder =
-                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes);
+                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes, runtime);
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Transfer {
