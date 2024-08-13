@@ -481,8 +481,8 @@ mod transaction {
 
     #[test]
     fn should_sign_transaction() {
-        let bytes = SAMPLE_TRANSACTION.as_bytes();
-        let transaction = crate::read_transaction(bytes).unwrap();
+        let bytes = serde_json::to_string_pretty(&*SAMPLE_TRANSACTION).unwrap();
+        let transaction = crate::read_transaction(bytes.as_bytes()).unwrap();
         assert_eq!(
             transaction.approvals().len(),
             0,
