@@ -77,4 +77,6 @@ pub struct TransactionStrParams<'a> {
     ///
     /// None means "call" (aka default) entry point.
     pub session_entry_point: Option<&'a str>,
+    /// Chunked arguments for the transaction.
+    pub chunked_args: Option<Vec<u8>>,
 }

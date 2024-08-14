@@ -1,9 +1,6 @@
 use casper_types::bytesrepr::Bytes;
 use casper_types::{AddressableEntityHash, PackageHash, PublicKey, TransferTarget, URef, U512};
-use casper_types::{
-    AddressableEntityHash, PackageHash, PublicKey, TransactionCategory, TransactionRuntime,
-    TransferTarget, URef, U512,
-};
+use casper_types::TransactionRuntime;
 
 /// An enum representing the parameters needed to construct a transaction builder
 /// for the commands concerning the creation of a transaction
@@ -60,6 +57,8 @@ pub enum TransactionBuilderParams<'a> {
         entry_point: &'a str,
         /// Transaction Runtime.
         runtime: TransactionRuntime,
+        /// The amount to be transferred in the invocable entity transaction.
+        transferred_value: u64,
     },
     /// Parameters for the invocable entity alias variant of the transaction builder
     InvocableEntityAlias {
@@ -69,6 +68,8 @@ pub enum TransactionBuilderParams<'a> {
         entry_point: &'a str,
         /// Transaction Runtime.
         runtime: TransactionRuntime,
+        /// Transferred value.
+        transferred_value: u64,
     },
     /// Parameters for the package variant of the transaction builder
     Package {
@@ -80,6 +81,8 @@ pub enum TransactionBuilderParams<'a> {
         entry_point: &'a str,
         /// Transaction Runtime.
         runtime: TransactionRuntime,
+        /// Transferred value.
+        transferred_value: u64,
     },
     /// Parameters for the package alias variant of the transaction builder
     PackageAlias {
@@ -91,6 +94,8 @@ pub enum TransactionBuilderParams<'a> {
         entry_point: &'a str,
         /// Transaction Runtime.
         runtime: TransactionRuntime,
+        /// Transferred value.
+        transferred_value: u64,
     },
     /// Parameters for the session variant of the transaction builder
     Session {
@@ -100,6 +105,10 @@ pub enum TransactionBuilderParams<'a> {
         transaction_bytes: Bytes,
         /// Transaction Runtime.
         runtime: TransactionRuntime,
+        /// Transferred value.
+        transferred_value: u64,
+        /// The optional seed for the session transaction
+        seed: Option<[u8; 32]>,
     },
     /// Parameters for the transfer variant of the transaction builder
     Transfer {

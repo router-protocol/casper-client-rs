@@ -533,6 +533,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::AddBid {
@@ -607,6 +608,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Delegate {
@@ -680,6 +682,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_string_params = transaction_str_params;
 
@@ -744,6 +747,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Undelegate {
@@ -823,6 +827,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Redelegate {
@@ -885,6 +890,7 @@ mod transaction {
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByHash(entity_hash),
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
 
         let entry_point_ref = &TransactionEntryPoint::Custom(entry_point);
@@ -907,12 +913,14 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_hash.into(),
             entry_point: "test-entry-point",
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -945,6 +953,7 @@ mod transaction {
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByName(alias),
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -964,12 +973,14 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias: "alias",
             entry_point: "entry-point-alias",
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1006,6 +1017,7 @@ mod transaction {
                 version: maybe_entity_version,
             },
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1025,6 +1037,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Package {
@@ -1032,6 +1045,7 @@ mod transaction {
             entry_point,
             maybe_entity_version,
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1065,6 +1079,7 @@ mod transaction {
                 version: maybe_entity_version,
             },
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1084,6 +1099,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::PackageAlias {
@@ -1091,6 +1107,7 @@ mod transaction {
             entry_point,
             maybe_entity_version,
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1121,6 +1138,8 @@ mod transaction {
             is_install_upgrade,
             runtime: TransactionRuntime::VmCasperV1,
             module_bytes: transaction_bytes.clone(),
+            transferred_value: 0,
+            seed: None,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1140,12 +1159,15 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
             runtime: TransactionRuntime::VmCasperV1,
+            transferred_value: 0,
+            seed: None,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1204,6 +1226,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Transfer {
@@ -1265,6 +1288,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_builder_params = TransactionBuilderParams::Transfer {
             maybe_source: Default::default(),
@@ -1307,6 +1331,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
@@ -1344,6 +1369,7 @@ mod transaction {
             transferred_value: "0",
             gas_limit: "",
             session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),

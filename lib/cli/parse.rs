@@ -15,6 +15,8 @@ use casper_types::{
     EntityAddr, ExecutableDeployItem, HashAddr, Key, NamedArg, PricingMode, PublicKey, RuntimeArgs,
     TimeDiff, Timestamp, TransactionHash, TransactionV1Hash, TransferTarget, UIntParseError, URef,
     U512,
+     TransactionArgs,
+
 };
 
 use super::{simple_args, CliError, PaymentStrParams, SessionStrParams};
@@ -244,12 +246,19 @@ fn check_no_conflicting_arg_types(
 pub fn args_from_simple_or_json(
     simple: Option<RuntimeArgs>,
     json: Option<RuntimeArgs>,
-) -> RuntimeArgs {
+    chunked: Option<Vec<u8>>,
+) -> TransactionArgs {
     // We can have exactly zero or one of the two as `Some`.
-    match (simple, json) {
-        (Some(args), None) | (None, Some(args)) => args,
-        (None, None) => RuntimeArgs::new(),
-        _ => unreachable!("should not have more than one of simple, json args"),
+    match chunked {
+        Some(chunked) => TransactionArgs::Bytesrepr(chunked.into()),
+        None => {
+            let named_args = match (simple, json) {
+                (Some(args), None) | (None, Some(args)) => args,
+                (None, None) => RuntimeArgs::new(),
+                _ => unreachable!("should not have more than one of simple, json args"),
+            };
+            TransactionArgs::Named(named_args)
+        },
     }
 }
 
@@ -361,6 +370,7 @@ pub(super) fn session_executable_deploy_item(
         session_version,
         session_entry_point,
         is_session_transfer: session_transfer,
+        session_chunked_args,
     } = params;
     // This is to make sure that we're using &str consistently in the macro call below.
     let is_session_transfer = if session_transfer { "true" } else { "" };
@@ -390,9 +400,11 @@ pub(super) fn session_executable_deploy_item(
     let session_args = args_from_simple_or_json(
         arg_simple::session::parse(session_args_simple)?,
         args_json::session::parse(session_args_json)?,
+        session_chunked_args.map(ToOwned::to_owned),
     );
 
     if session_transfer {
+        let session_args = session_args.as_named().unwrap().clone();
         if session_args.is_empty() {
             return Err(CliError::InvalidArgument {
                 context: "is_session_transfer",
@@ -406,6 +418,8 @@ pub(super) fn session_executable_deploy_item(
         error: session_entry_point.to_string(),
     };
     if let Some(session_name) = name(session_name) {
+        let session_args = session_args.as_named().unwrap().clone();
+
         return Ok(ExecutableDeployItem::StoredContractByName {
             name: session_name,
             entry_point: entry_point(session_entry_point).ok_or_else(invalid_entry_point)?,
@@ -414,6 +428,7 @@ pub(super) fn session_executable_deploy_item(
     }
 
     if let Some(session_hash) = contract_hash(session_hash)? {
+        let session_args = session_args.as_named().unwrap().clone();
         return Ok(ExecutableDeployItem::StoredContractByHash {
             hash: session_hash.into(),
             entry_point: entry_point(session_entry_point).ok_or_else(invalid_entry_point)?,
@@ -423,6 +438,7 @@ pub(super) fn session_executable_deploy_item(
 
     let version = version(session_version)?;
     if let Some(package_name) = name(session_package_name) {
+        let session_args = session_args.as_named().unwrap().clone();
         return Ok(ExecutableDeployItem::StoredVersionedContractByName {
             name: package_name,
             version, // defaults to highest enabled version
@@ -432,6 +448,7 @@ pub(super) fn session_executable_deploy_item(
     }
 
     if let Some(package_hash) = contract_hash(session_package_hash)? {
+        let session_args = session_args.as_named().unwrap().clone();
         return Ok(ExecutableDeployItem::StoredVersionedContractByHash {
             hash: package_hash.into(),
             version, // defaults to highest enabled version
@@ -454,9 +471,11 @@ pub(super) fn session_executable_deploy_item(
         });
     };
 
+    let args = session_args.as_named().ok_or(CliError::UnexpectedTransactionArgsVariant)?;
+
     Ok(ExecutableDeployItem::ModuleBytes {
         module_bytes,
-        args: session_args,
+        args: args.clone(),
     })
 }
 
@@ -540,6 +559,7 @@ pub(super) fn payment_executable_deploy_item(
     let payment_args = args_from_simple_or_json(
         arg_simple::payment::parse(payment_args_simple)?,
         args_json::payment::parse(payment_args_json)?,
+        None,
     );
 
     if let Ok(payment_args) = standard_payment(payment_amount) {
@@ -553,6 +573,8 @@ pub(super) fn payment_executable_deploy_item(
         context: "payment_entry_point",
         error: payment_entry_point.to_string(),
     };
+
+    let payment_args = payment_args.as_named().cloned().ok_or(CliError::UnexpectedTransactionArgsVariant)?;
 
     if let Some(payment_name) = name(payment_name) {
         return Ok(ExecutableDeployItem::StoredContractByName {
@@ -927,7 +949,7 @@ pub(super) fn pricing_mode(
                     error,
                 }
             })?;
-            Ok(PricingMode::Classic {
+            Ok(PricingMode::PaymentLimited {
                 payment_amount,
                 gas_price_tolerance,
                 standard_payment,
@@ -972,32 +994,6 @@ pub(super) fn pricing_mode(
             }
             Ok(PricingMode::Prepaid {
                 receipt: maybe_receipt.unwrap_or_default(),
-            })
-        }
-        "gas-limited" => {
-            if maybe_gas_limit.is_empty() {
-                return Err(CliError::InvalidArgument {
-                    context: "pricing_mode",
-                    error: "Gas limited pricing mode requires a provided gas limit".to_string(),
-                });
-            }
-            let gas_limit =
-                maybe_gas_limit
-                    .parse::<u64>()
-                    .map_err(|error| CliError::FailedToParseInt {
-                        context: "gas_limit",
-                        error,
-                    })?;
-            let gas_price_tolerance =
-                maybe_gas_price_tolerance_str
-                    .parse::<u8>()
-                    .map_err(|error| CliError::FailedToParseInt {
-                        context: "gas_price_tolerance",
-                        error,
-                    })?;
-            Ok(PricingMode::GasLimited {
-                gas_limit,
-                gas_price_tolerance,
             })
         }
         _ => Err(CliError::InvalidArgument {
@@ -1062,6 +1058,7 @@ mod tests {
             session_version: "",
             session_entry_point: "entrypoint",
             is_session_transfer: false,
+            session_chunked_args: None,
         })
         .unwrap_err();
 
@@ -1111,7 +1108,8 @@ mod tests {
                 session_args_json: "",
                 session_version: "",
                 session_entry_point: "",
-                is_session_transfer: false
+                is_session_transfer: false,
+                session_chunked_args: None,
             }),
             Err(CliError::ConflictingArguments { context, .. }) if context == test_context
         ));
@@ -1922,7 +1920,7 @@ mod tests {
             .unwrap();
             assert_eq!(
                 parsed,
-                PricingMode::Classic {
+                PricingMode::PaymentLimited {
                     payment_amount: 10,
                     gas_price_tolerance: 10,
                     standard_payment: true,

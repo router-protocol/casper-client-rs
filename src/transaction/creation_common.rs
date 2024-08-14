@@ -38,6 +38,7 @@ pub(super) enum DisplayOrder {
     Source,
     SessionArgSimple,
     SessionArgsJson,
+    ChunkedArgs,
     SessionEntryPoint,
     SessionVersion,
     PublicKey,
@@ -300,6 +301,38 @@ pub(super) mod args_json {
             .value_name(ARG_VALUE_NAME)
             .help(ARG_HELP.as_str())
             .display_order(order)
+    }
+}
+
+/// Handles providing the arg for and retrieval of chunked arguments passed as base16 string.
+pub(super) mod chunked_args {
+    use super::*;
+    use once_cell::sync::Lazy;
+
+    pub const ARG_NAME: &str = "chunked-args";
+
+    const ARG_VALUE_NAME: &str = "BYTES";
+
+    static ARG_HELP: Lazy<String> = Lazy::new(|| {
+        format!(
+            "Chunked arg bytes as base16 '--{}'.",
+            show_json_args_examples::ARG_NAME,
+        )
+    });
+
+    pub fn get(matches: &ArgMatches) -> Option<Vec<u8>> {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .and_then(|data| base16::decode(data).ok())
+    }
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(false)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP.as_str())
+            .display_order(DisplayOrder::ChunkedArgs as usize)
     }
 }
 
@@ -866,7 +899,6 @@ pub(super) mod is_install_upgrade {
 pub(super) mod transferred_value {
     use std::str::FromStr;
 
-    use casper_types::TransactionCategory;
     use clap::{value_parser, ValueEnum};
 
     use super::*;
@@ -1627,11 +1659,15 @@ pub(super) mod invocable_entity {
         let runtime = transaction_runtime::get(matches);
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
+        let transferred_value = transferred_value::get(matches)
+            .map(|value| value.parse::<u64>().unwrap())
+            .unwrap_or_default();
 
         let params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_addr.into(), // TODO: Skip `entity_addr` and match directly for hash?
             entry_point,
             runtime: runtime.cloned().unwrap_or_default().into(),
+            transferred_value,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1678,11 +1714,15 @@ pub(super) mod invocable_entity_alias {
             .cloned()
             .unwrap_or_default()
             .into();
+        let transferred_value=  transferred_value::get(matches)
+            .map(|value| value.parse::<u64>().unwrap())
+            .unwrap_or_default();
 
         let params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
             entry_point,
             runtime,
+            transferred_value,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1732,12 +1772,15 @@ pub(super) mod package {
             .into();
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-
+        let transferred_value = transferred_value::get(matches)
+            .map(|value| value.parse::<u64>().unwrap())
+            .unwrap_or_default();
         let params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
             maybe_entity_version,
             entry_point,
             runtime,
+            transferred_value,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1788,12 +1831,16 @@ pub(super) mod package_alias {
             .cloned()
             .unwrap_or_default()
             .into();
+        let transferred_value = transferred_value::get(matches)
+            .map(|value| value.parse::<u64>().unwrap())
+            .unwrap_or_default();
 
         let params = TransactionBuilderParams::PackageAlias {
             package_alias,
             maybe_entity_version,
             entry_point,
             runtime,
+            transferred_value,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1857,11 +1904,17 @@ pub(super) mod session {
 
         let entrypoint = session_entry_point::get(matches);
 
+        let transferred_value = transferred_value::get(matches)
+            .map(|value| value.parse::<u64>().unwrap())
+            .unwrap_or_default();
+        let seed = None; // TODO: support seeds
+
         let params = TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
-            transaction_category: transaction_category.into_transaction_v1_category(),
             runtime,
+            transferred_value,
+            seed,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -1874,10 +1927,10 @@ pub(super) mod session {
             .arg(is_install_upgrade::arg(
                 DisplayOrder::IsInstallUpgrade as usize,
             ))
-            .arg(transaction_category::arg())
             .arg(transaction_runtime::arg())
             .arg(gas_limit::arg())
             .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
     }
 }
 
@@ -2064,6 +2117,7 @@ pub(super) fn build_transaction_str_params(
     let maybe_output_path = output::get(matches).unwrap_or_default();
     let initiator_addr = initiator_address::get(matches);
     let session_entry_point = session_entry_point::get(matches);
+    let chunked_args = chunked_args::get(matches);
 
     if obtain_session_args {
         let session_args_simple = arg_simple::session::get(matches);
@@ -2088,6 +2142,7 @@ pub(super) fn build_transaction_str_params(
                 .unwrap_or_default(),
             gas_limit,
             session_entry_point,
+            chunked_args,
         }
     } else {
         TransactionStrParams {
