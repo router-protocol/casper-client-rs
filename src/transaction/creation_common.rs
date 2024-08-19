@@ -1677,6 +1677,10 @@ pub(super) mod invocable_entity {
         add_bid_subcommand
             .arg(entity_addr::arg())
             .arg(session_entry_point::arg())
+            .arg(transaction_runtime::arg())
+            .arg(gas_limit::arg())
+            .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
     }
 }
 pub(super) mod invocable_entity_alias {
