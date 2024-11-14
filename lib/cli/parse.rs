@@ -13,10 +13,8 @@ use casper_types::SecretKey;
 use casper_types::{
     account::AccountHash, bytesrepr::Bytes, crypto, AsymmetricType, BlockHash, DeployHash, Digest,
     EntityAddr, ExecutableDeployItem, HashAddr, Key, NamedArg, PricingMode, PublicKey, RuntimeArgs,
-    TimeDiff, Timestamp, TransactionHash, TransactionV1Hash, TransferTarget, UIntParseError, URef,
-    U512,
-     TransactionArgs,
-
+    TimeDiff, Timestamp, TransactionArgs, TransactionHash, TransactionV1Hash, TransferTarget,
+    UIntParseError, URef, U512,
 };
 
 use super::{simple_args, CliError, PaymentStrParams, SessionStrParams};
@@ -248,6 +246,7 @@ pub fn args_from_simple_or_json(
     json: Option<RuntimeArgs>,
     chunked: Option<Vec<u8>>,
 ) -> TransactionArgs {
+    dbg!(&simple, &json, &chunked);
     // We can have exactly zero or one of the two as `Some`.
     match chunked {
         Some(chunked) => TransactionArgs::Bytesrepr(chunked.into()),
@@ -258,7 +257,7 @@ pub fn args_from_simple_or_json(
                 _ => unreachable!("should not have more than one of simple, json args"),
             };
             TransactionArgs::Named(named_args)
-        },
+        }
     }
 }
 
@@ -471,7 +470,9 @@ pub(super) fn session_executable_deploy_item(
         });
     };
 
-    let args = session_args.as_named().ok_or(CliError::UnexpectedTransactionArgsVariant)?;
+    let args = session_args
+        .as_named()
+        .ok_or(CliError::UnexpectedTransactionArgsVariant)?;
 
     Ok(ExecutableDeployItem::ModuleBytes {
         module_bytes,
@@ -574,7 +575,10 @@ pub(super) fn payment_executable_deploy_item(
         error: payment_entry_point.to_string(),
     };
 
-    let payment_args = payment_args.as_named().cloned().ok_or(CliError::UnexpectedTransactionArgsVariant)?;
+    let payment_args = payment_args
+        .as_named()
+        .cloned()
+        .ok_or(CliError::UnexpectedTransactionArgsVariant)?;
 
     if let Some(payment_name) = name(payment_name) {
         return Ok(ExecutableDeployItem::StoredContractByName {

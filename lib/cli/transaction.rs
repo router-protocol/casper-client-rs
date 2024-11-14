@@ -11,7 +11,8 @@ use crate::{
     SuccessResponse,
 };
 use casper_types::{
-    Digest, InitiatorAddr, SecretKey, Transaction, TransactionEntryPoint, TransactionV1, TransactionV1Builder
+    Digest, InitiatorAddr, SecretKey, Transaction, TransactionArgs, TransactionEntryPoint,
+    TransactionRuntime, TransactionV1, TransactionV1Builder,
 };
 
 pub fn create_transaction(
@@ -31,6 +32,8 @@ pub fn create_transaction(
     let ttl = parse::ttl(transaction_params.ttl)?;
     let maybe_session_account = parse::session_account(&transaction_params.initiator_addr)?;
 
+    let is_v2_wasm = matches!(&builder_params, TransactionBuilderParams::Session { runtime, .. } if runtime == &TransactionRuntime::VmCasperV2);
+
     let mut transaction_builder = make_transaction_builder(builder_params)?;
 
     transaction_builder = transaction_builder
@@ -44,6 +47,7 @@ pub fn create_transaction(
             error: "pricing_mode is required to be non empty".to_string(),
         });
     }
+
     let pricing_mode = if transaction_params.pricing_mode.to_lowercase().as_str() == "reserved" {
         let digest = Digest::from_hex(transaction_params.receipt).map_err(|error| {
             CliError::FailedToParseDigest {
@@ -57,9 +61,8 @@ pub fn create_transaction(
             transaction_params.payment_amount,
             transaction_params.gas_price_tolerance,
             transaction_params.additional_computation_factor,
-            transaction_params.gas_limit,
+            transaction_params.standard_payment,
             Some(digest),
-
         )?
     } else {
         parse::pricing_mode(
@@ -67,7 +70,7 @@ pub fn create_transaction(
             transaction_params.payment_amount,
             transaction_params.gas_price_tolerance,
             transaction_params.additional_computation_factor,
-            transaction_params.gas_limit,
+            transaction_params.standard_payment,
             None,
         )?
     };
@@ -77,15 +80,25 @@ pub fn create_transaction(
     let maybe_json_args = parse::args_json::session::parse(transaction_params.session_args_json)?;
     let maybe_simple_args =
         parse::arg_simple::session::parse(&transaction_params.session_args_simple)?;
-    let maybe_chunked_args = transaction_params.chunked_args;
+    let chunked = transaction_params.chunked_args;
 
-    let args =
-        parse::args_from_simple_or_json(maybe_simple_args, maybe_json_args, maybe_chunked_args);
+    let args = parse::args_from_simple_or_json(maybe_simple_args, maybe_json_args, chunked);
+    match args {
+        TransactionArgs::Named(named_args) => {
+            if !named_args.is_empty() {
+                transaction_builder = transaction_builder.with_runtime_args(named_args);
+            }
+        }
+        TransactionArgs::Bytesrepr(chunked_args) => {
+            transaction_builder = transaction_builder.with_chunked_args(chunked_args);
+        }
+    }
 
-    transaction_builder = transaction_builder.with_transaction_args(args);
-
-    if let Some(session_entry_point) = transaction_params.session_entry_point {
-        transaction_builder = transaction_builder.with_entry_point(TransactionEntryPoint::Custom(session_entry_point.to_owned()));
+    if is_v2_wasm {
+        if let Some(entry_point) = transaction_params.session_entry_point {
+            transaction_builder = transaction_builder
+                .with_entry_point(TransactionEntryPoint::Custom(entry_point.to_owned()));
+        }
     }
 
     if let Some(secret_key) = &maybe_secret_key {
@@ -98,7 +111,7 @@ pub fn create_transaction(
     }
 
     let txn = transaction_builder.build().map_err(crate::Error::from)?;
-    dbg!(&txn);
+    // dbg!(&txn);
     Ok(txn)
 }
 
@@ -320,7 +333,6 @@ pub fn make_transaction_builder(
             entry_point,
             runtime,
             transferred_value,
-
         } => {
             let new_targeting_package_via_alias =
                 TransactionV1Builder::new_targeting_package_via_alias(
@@ -340,8 +352,13 @@ pub fn make_transaction_builder(
             transferred_value,
             seed,
         } => {
-            let transaction_builder =
-                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes, runtime, transferred_value, seed);
+            let transaction_builder = TransactionV1Builder::new_session(
+                is_install_upgrade,
+                transaction_bytes,
+                runtime,
+                transferred_value,
+                seed,
+            );
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Transfer {

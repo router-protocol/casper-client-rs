@@ -30,7 +30,6 @@ pub(super) enum DisplayOrder {
     TransferId,
     Timestamp,
     Ttl,
-    TransactionCategory,
     TransferredValue,
     ChainName,
     MaximumDelegationRate,
@@ -47,13 +46,11 @@ pub(super) enum DisplayOrder {
     EntityAlias,
     PaymentAmount,
     PricingMode,
-    TransactionRuntime,
     StandardPayment,
     Receipt,
     GasPriceTolerance,
     AdditionalComputationFactor,
     IsInstallUpgrade,
-    GasLimit,
     TransactionAmount,
     Validator,
     NewValidator,
@@ -526,28 +523,25 @@ pub(super) mod pricing_mode {
         Classic,
         Reserved,
         Fixed,
-        GasLimited,
     }
 
     impl PricingMode {
         const CLASSIC: &'static str = "classic";
         const RESERVED: &'static str = "reserved";
         const FIXED: &'static str = "fixed";
-        const GAS_LIMITED: &'static str = "gas-limited";
 
         pub(crate) fn as_str(&self) -> &str {
             match self {
                 Self::Classic => Self::CLASSIC,
                 Self::Reserved => Self::RESERVED,
                 Self::Fixed => Self::FIXED,
-                Self::GasLimited => Self::GAS_LIMITED,
             }
         }
     }
 
     impl ValueEnum for PricingMode {
         fn value_variants<'a>() -> &'a [Self] {
-            &[Self::Classic, Self::Reserved, Self::Fixed, Self::GasLimited]
+            &[Self::Classic, Self::Reserved, Self::Fixed]
         }
 
         fn to_possible_value(&self) -> Option<PossibleValue> {
@@ -555,7 +549,6 @@ pub(super) mod pricing_mode {
                 Self::Classic => PossibleValue::new(PricingMode::CLASSIC),
                 Self::Reserved => PossibleValue::new(PricingMode::RESERVED),
                 Self::Fixed => PossibleValue::new(PricingMode::FIXED),
-                Self::GasLimited => PossibleValue::new(PricingMode::GAS_LIMITED),
             })
         }
     }
@@ -568,7 +561,6 @@ pub(super) mod pricing_mode {
                 PricingMode::CLASSIC => Ok(Self::Classic),
                 PricingMode::RESERVED => Ok(Self::Reserved),
                 PricingMode::FIXED => Ok(Self::Fixed),
-                PricingMode::GAS_LIMITED => Ok(Self::GasLimited),
                 _ => Err(format!("'{}' is not a valid pricing option", s)),
             }
         }
@@ -652,13 +644,6 @@ pub(super) mod transaction_runtime {
     impl TransactionRuntime {
         const VM_CASPER_V1: &'static str = "vm-casper-v1";
         const VM_CASPER_V2: &'static str = "vm-casper-v2";
-
-        pub(crate) fn as_str(&self) -> &str {
-            match self {
-                Self::VmCasperV1 => Self::VM_CASPER_V1,
-                Self::VmCasperV2 => Self::VM_CASPER_V2,
-            }
-        }
     }
 
     impl ValueEnum for TransactionRuntime {
@@ -897,14 +882,10 @@ pub(super) mod is_install_upgrade {
 }
 
 pub(super) mod transferred_value {
-    use std::str::FromStr;
-
-    use clap::{value_parser, ValueEnum};
-
     use super::*;
 
     const ARG_NAME: &str = "transferred-value";
-    const ARG_SHORT: char = 't';
+    const ARG_SHORT: char = 'T';
     const ARG_VALUE_NAME: &str = "integer";
     const ARG_HELP: &str = "Transferred token value";
 
@@ -1718,7 +1699,7 @@ pub(super) mod invocable_entity_alias {
             .cloned()
             .unwrap_or_default()
             .into();
-        let transferred_value=  transferred_value::get(matches)
+        let transferred_value = transferred_value::get(matches)
             .map(|value| value.parse::<u64>().unwrap())
             .unwrap_or_default();
 
@@ -1905,8 +1886,6 @@ pub(super) mod session {
             .cloned()
             .unwrap_or_default()
             .into();
-
-        let entrypoint = session_entry_point::get(matches);
 
         let transferred_value = transferred_value::get(matches)
             .map(|value| value.parse::<u64>().unwrap())

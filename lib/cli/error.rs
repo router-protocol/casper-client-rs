@@ -193,6 +193,7 @@ pub enum CliError {
     #[error("Failed to parse base16 bytes: {0}")]
     FailedToParseBase16(#[from] DecodeError),
 
+    /// Unexpected transaction args variant.
     #[error("Unexpected transaction args variant")]
     UnexpectedTransactionArgsVariant,
 }
