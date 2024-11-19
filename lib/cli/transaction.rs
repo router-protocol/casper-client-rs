@@ -11,7 +11,8 @@ use crate::{
     SuccessResponse,
 };
 use casper_types::{
-    Digest, InitiatorAddr, SecretKey, Transaction, TransactionV1, TransactionV1Builder,
+    Digest, InitiatorAddr, SecretKey, Transaction, TransactionRuntime, TransactionV1,
+    TransactionV1Builder,
 };
 
 pub fn create_transaction(
@@ -265,8 +266,12 @@ pub fn make_transaction_builder(
             entity_hash,
             entry_point,
         } => {
-            let transaction_builder =
-                TransactionV1Builder::new_targeting_invocable_entity(entity_hash, entry_point);
+            let transaction_builder = TransactionV1Builder::new_targeting_invocable_entity(
+                entity_hash,
+                entry_point,
+                TransactionRuntime::VmCasperV1,
+                0,
+            );
             Ok(transaction_builder)
         }
         TransactionBuilderParams::InvocableEntityAlias {
@@ -277,6 +282,8 @@ pub fn make_transaction_builder(
                 TransactionV1Builder::new_targeting_invocable_entity_via_alias(
                     entity_alias,
                     entry_point,
+                    TransactionRuntime::VmCasperV1,
+                    0,
                 );
             Ok(transaction_builder)
         }
@@ -289,6 +296,8 @@ pub fn make_transaction_builder(
                 package_hash,
                 maybe_entity_version,
                 entry_point,
+                TransactionRuntime::VmCasperV1,
+                0,
             );
             Ok(transaction_builder)
         }
@@ -301,6 +310,8 @@ pub fn make_transaction_builder(
                 package_alias,
                 maybe_entity_version,
                 entry_point,
+                TransactionRuntime::VmCasperV1,
+                0,
             );
             Ok(transaction_builder)
         }
@@ -308,8 +319,13 @@ pub fn make_transaction_builder(
             is_install_upgrade,
             transaction_bytes,
         } => {
-            let transaction_builder =
-                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes);
+            let transaction_builder = TransactionV1Builder::new_session(
+                is_install_upgrade,
+                transaction_bytes,
+                TransactionRuntime::VmCasperV1,
+                0,
+                None,
+            );
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Transfer {
