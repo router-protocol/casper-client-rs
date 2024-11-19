@@ -447,7 +447,7 @@ mod transaction {
     use super::*;
     use crate::Error::TransactionBuild;
     use casper_types::{
-        bytesrepr::Bytes, PackageAddr, RuntimeArgs, TransactionEntryPoint,
+        bytesrepr::Bytes, PackageAddr, TransactionArgs, TransactionEntryPoint,
         TransactionInvocationTarget, TransactionRuntime, TransactionTarget,
         TransactionV1BuilderError, TransferTarget,
     };
@@ -556,7 +556,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("public_key")
                 .unwrap(),
@@ -565,7 +567,9 @@ mod transaction {
         assert!(transaction
             .as_ref()
             .unwrap()
-            .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+            .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+            .unwrap()
+            .into_named()
             .unwrap()
             .get("delegation_rate")
             .is_some());
@@ -573,7 +577,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
@@ -629,7 +635,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
@@ -639,7 +647,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("delegator")
                 .unwrap(),
@@ -649,7 +659,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("validator")
                 .unwrap(),
@@ -701,7 +713,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
@@ -711,7 +725,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("public_key")
                 .unwrap(),
@@ -768,7 +784,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
@@ -778,7 +796,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("delegator")
                 .unwrap(),
@@ -788,7 +808,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("validator")
                 .unwrap(),
@@ -847,7 +869,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
@@ -857,7 +881,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("delegator")
                 .unwrap(),
@@ -867,7 +893,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("validator")
                 .unwrap(),
@@ -877,7 +905,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("new_validator")
                 .unwrap(),
@@ -1254,7 +1284,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("source")
                 .unwrap(),
@@ -1264,7 +1296,9 @@ mod transaction {
             transaction
                 .as_ref()
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
                 .unwrap()
                 .get("target")
                 .unwrap(),

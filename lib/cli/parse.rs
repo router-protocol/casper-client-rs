@@ -238,8 +238,8 @@ fn check_no_conflicting_arg_types(
 /// let simple_args = RuntimeArgs::new(); // Simple arguments
 /// let json_args = RuntimeArgs::new();   // JSON arguments
 ///
-/// let _result_args = args_from_simple_or_json(Some(simple_args), None);
-/// let _result_args = args_from_simple_or_json(None, Some(json_args));
+/// let _result_args = args_from_simple_or_json(Some(simple_args), None, None);
+/// let _result_args = args_from_simple_or_json(None, Some(json_args), None);
 /// ```
 pub fn args_from_simple_or_json(
     simple: Option<RuntimeArgs>,
