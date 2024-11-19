@@ -39,6 +39,7 @@ pub struct SessionStrParams<'a> {
     pub(super) session_version: &'a str,
     pub(super) session_entry_point: &'a str,
     pub(super) is_session_transfer: bool,
+    pub(super) session_chunked_args: Option<&'a [u8]>,
 }
 
 impl<'a> SessionStrParams<'a> {

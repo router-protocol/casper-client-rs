@@ -11,8 +11,8 @@ use crate::{
     SuccessResponse,
 };
 use casper_types::{
-    Digest, InitiatorAddr, SecretKey, Transaction, TransactionRuntime, TransactionV1,
-    TransactionV1Builder,
+    Digest, InitiatorAddr, SecretKey, Transaction, TransactionArgs, TransactionEntryPoint,
+    TransactionRuntime, TransactionV1, TransactionV1Builder,
 };
 
 pub fn create_transaction(
@@ -32,6 +32,8 @@ pub fn create_transaction(
     let ttl = parse::ttl(transaction_params.ttl)?;
     let maybe_session_account = parse::session_account(&transaction_params.initiator_addr)?;
 
+    let is_v2_wasm = matches!(&builder_params, TransactionBuilderParams::Session { runtime, .. } if runtime == &TransactionRuntime::VmCasperV2);
+
     let mut transaction_builder = make_transaction_builder(builder_params)?;
 
     transaction_builder = transaction_builder
@@ -45,6 +47,7 @@ pub fn create_transaction(
             error: "pricing_mode is required to be non empty".to_string(),
         });
     }
+
     let pricing_mode = if transaction_params.pricing_mode.to_lowercase().as_str() == "reserved" {
         let digest = Digest::from_hex(transaction_params.receipt).map_err(|error| {
             CliError::FailedToParseDigest {
@@ -77,11 +80,27 @@ pub fn create_transaction(
     let maybe_json_args = parse::args_json::session::parse(transaction_params.session_args_json)?;
     let maybe_simple_args =
         parse::arg_simple::session::parse(&transaction_params.session_args_simple)?;
+    let chunked = transaction_params.chunked_args;
 
-    let args = parse::args_from_simple_or_json(maybe_simple_args, maybe_json_args);
-    if !args.is_empty() {
-        transaction_builder = transaction_builder.with_runtime_args(args);
+    let args = parse::args_from_simple_or_json(maybe_simple_args, maybe_json_args, chunked);
+    match args {
+        TransactionArgs::Named(named_args) => {
+            if !named_args.is_empty() {
+                transaction_builder = transaction_builder.with_runtime_args(named_args);
+            }
+        }
+        TransactionArgs::Bytesrepr(chunked_args) => {
+            transaction_builder = transaction_builder.with_chunked_args(chunked_args);
+        }
     }
+
+    if is_v2_wasm {
+        if let Some(entry_point) = transaction_params.session_entry_point {
+            transaction_builder = transaction_builder
+                .with_entry_point(TransactionEntryPoint::Custom(entry_point.to_owned()));
+        }
+    }
+
     if let Some(secret_key) = &maybe_secret_key {
         transaction_builder = transaction_builder.with_secret_key(secret_key);
     }
@@ -92,6 +111,7 @@ pub fn create_transaction(
     }
 
     let txn = transaction_builder.build().map_err(crate::Error::from)?;
+    // dbg!(&txn);
     Ok(txn)
 }
 
@@ -265,25 +285,29 @@ pub fn make_transaction_builder(
         TransactionBuilderParams::InvocableEntity {
             entity_hash,
             entry_point,
+            runtime,
+            transferred_value,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_invocable_entity(
                 entity_hash,
                 entry_point,
-                TransactionRuntime::VmCasperV1,
-                0,
+                runtime,
+                transferred_value,
             );
             Ok(transaction_builder)
         }
         TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
             entry_point,
+            runtime,
+            transferred_value,
         } => {
             let transaction_builder =
                 TransactionV1Builder::new_targeting_invocable_entity_via_alias(
                     entity_alias,
                     entry_point,
-                    TransactionRuntime::VmCasperV1,
-                    0,
+                    runtime,
+                    transferred_value,
                 );
             Ok(transaction_builder)
         }
@@ -291,13 +315,15 @@ pub fn make_transaction_builder(
             package_hash,
             maybe_entity_version,
             entry_point,
+            runtime,
+            transferred_value,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_package(
                 package_hash,
                 maybe_entity_version,
                 entry_point,
-                TransactionRuntime::VmCasperV1,
-                0,
+                runtime,
+                transferred_value,
             );
             Ok(transaction_builder)
         }
@@ -305,26 +331,33 @@ pub fn make_transaction_builder(
             package_alias,
             maybe_entity_version,
             entry_point,
+            runtime,
+            transferred_value,
         } => {
-            let transaction_builder = TransactionV1Builder::new_targeting_package_via_alias(
-                package_alias,
-                maybe_entity_version,
-                entry_point,
-                TransactionRuntime::VmCasperV1,
-                0,
-            );
+            let new_targeting_package_via_alias =
+                TransactionV1Builder::new_targeting_package_via_alias(
+                    package_alias,
+                    maybe_entity_version,
+                    entry_point,
+                    runtime,
+                    transferred_value,
+                );
+            let transaction_builder = new_targeting_package_via_alias;
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
+            runtime,
+            transferred_value,
+            seed,
         } => {
             let transaction_builder = TransactionV1Builder::new_session(
                 is_install_upgrade,
                 transaction_bytes,
-                TransactionRuntime::VmCasperV1,
-                0,
-                None,
+                runtime,
+                transferred_value,
+                seed,
             );
             Ok(transaction_builder)
         }
