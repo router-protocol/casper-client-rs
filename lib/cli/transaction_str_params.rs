@@ -69,8 +69,6 @@ pub struct TransactionStrParams<'a> {
     pub receipt: &'a str,
     /// Standard payment.
     pub standard_payment: &'a str,
-    /// Gas limit for the transaction.
-    pub gas_limit: &'a str,
     /// Transaferred value.
     pub transferred_value: &'a str,
     /// The entry point for the session.
