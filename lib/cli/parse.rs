@@ -246,7 +246,6 @@ pub fn args_from_simple_or_json(
     json: Option<RuntimeArgs>,
     chunked: Option<Vec<u8>>,
 ) -> TransactionArgs {
-    dbg!(&simple, &json, &chunked);
     // We can have exactly zero or one of the two as `Some`.
     match chunked {
         Some(chunked) => TransactionArgs::Bytesrepr(chunked.into()),
@@ -1835,7 +1834,6 @@ mod tests {
         fn should_parse_fixed_pricing_mode_identifier() {
             let pricing_mode_str = "fixed";
             let payment_amount = "";
-            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "1";
             let standard_payment = "";
@@ -1910,7 +1908,6 @@ mod tests {
             let pricing_mode_str = "classic";
             let payment_amount = "10";
             let standard_payment = "true";
-            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "0";
             let parsed = pricing_mode(
@@ -1937,7 +1934,6 @@ mod tests {
             let pricing_mode_str = "invalid";
             let payment_amount = "10";
             let standard_payment = "true";
-            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "0";
             let parsed = pricing_mode(
@@ -1976,7 +1972,6 @@ mod tests {
             let pricing_mode_str = "classic";
             let payment_amount = "";
             let standard_payment = "true";
-            let gas_limit = "";
             let gas_price_tolerance = "10";
             let additional_computation_factor = "0";
             let parsed = pricing_mode(

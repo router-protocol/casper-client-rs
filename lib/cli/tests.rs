@@ -451,31 +451,34 @@ mod transaction {
         TransactionInvocationTarget, TransactionRuntime, TransactionTarget,
         TransactionV1BuilderError, TransferTarget,
     };
-    const SAMPLE_TRANSACTION: &str = r#"{
-  "hash": "57144349509f7cb9374e0f38b4e4910526b397a38f0dc21eaae1df916df66aae",
-  "payload": {
-    "initiator_addr": {
-      "PublicKey": "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d"
-    },
-    "timestamp": "2024-10-07T16:45:27.994Z",
-    "ttl": "30m",
-    "chain_name": "test",
-    "pricing_mode": {
-      "Fixed": {
-        "additional_computation_factor": 0,
-        "gas_price_tolerance": 10
-      }
-    },
-    "fields": {
-      "0": "020000000600000074617267657421000000722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d010c06000000616d6f756e7402000000010a08",
-      "1": "010000000000000000000100000000",
-      "2": "010000000000000000000100000002",
-      "3": "010000000000000000000100000000"
-    }
-  },
-  "approvals": []
-}
-"#;
+    use once_cell::sync::Lazy;
+    use serde_json::json;
+    static SAMPLE_TRANSACTION: Lazy<serde_json::Value> = Lazy::new(|| {
+        json!({
+            "hash": "57144349509f7cb9374e0f38b4e4910526b397a38f0dc21eaae1df916df66aae",
+            "payload": {
+                "initiator_addr": {
+                    "PublicKey": "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d",
+                },
+                "timestamp": "2024-10-07T16:45:27.994Z",
+                "ttl": "30m",
+                "chain_name": "test",
+                "pricing_mode": {
+                "Fixed": {
+                    "additional_computation_factor": 0,
+                    "gas_price_tolerance": 10,
+                }
+                },
+                "fields": {
+                    "0": "020000000600000074617267657421000000722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d010c06000000616d6f756e7402000000010a08",
+                    "1": "010000000000000000000100000000",
+                    "2": "010000000000000000000100000002",
+                    "3": "010000000000000000000100000000",
+                }
+            },
+            "approvals": [],
+        })
+    });
     const SAMPLE_DIGEST: &str =
         "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d";
 
