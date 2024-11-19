@@ -534,7 +534,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -615,7 +614,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -695,7 +693,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -764,7 +761,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -850,7 +846,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -944,7 +939,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1004,7 +998,6 @@ mod transaction {
             additional_computation_factor: "",
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1068,7 +1061,6 @@ mod transaction {
             additional_computation_factor: "",
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1130,7 +1122,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1190,7 +1181,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1257,7 +1247,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1323,7 +1312,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1366,7 +1354,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };
@@ -1404,7 +1391,6 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
             transferred_value: "0",
-            gas_limit: "",
             session_entry_point: None,
             chunked_args: None,
         };

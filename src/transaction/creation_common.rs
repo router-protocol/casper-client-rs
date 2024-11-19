@@ -441,35 +441,6 @@ pub(super) mod gas_price_tolerance {
     }
 }
 
-pub(super) mod gas_limit {
-    use super::*;
-    pub(in crate::transaction) const ARG_NAME: &str = "gas-limit";
-
-    const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
-
-    const ARG_ALIAS: &str = "gas-limit";
-    const ARG_SHORT: char = 'l';
-    const ARG_HELP: &str =
-        "The maximum amount of gas the user is willing to pay for the transaction";
-
-    pub(in crate::transaction) fn arg() -> Arg {
-        Arg::new(ARG_NAME)
-            .long(ARG_NAME)
-            .alias(ARG_ALIAS)
-            .short(ARG_SHORT)
-            .required(true)
-            .value_name(ARG_VALUE_NAME)
-            .help(ARG_HELP)
-            .display_order(DisplayOrder::GasPriceTolerance as usize)
-    }
-
-    pub fn get(matches: &ArgMatches) -> &str {
-        matches
-            .get_one::<String>(ARG_NAME)
-            .map(String::as_str)
-            .unwrap_or_default()
-    }
-}
 pub(super) mod transfer_amount {
     use super::*;
     pub(in crate::transaction) const ARG_NAME: &str = "transfer-amount";
@@ -1659,7 +1630,6 @@ pub(super) mod invocable_entity {
             .arg(entity_addr::arg())
             .arg(session_entry_point::arg())
             .arg(transaction_runtime::arg())
-            .arg(gas_limit::arg())
             .arg(transferred_value::arg())
             .arg(chunked_args::arg())
     }
@@ -1911,7 +1881,6 @@ pub(super) mod session {
                 DisplayOrder::IsInstallUpgrade as usize,
             ))
             .arg(transaction_runtime::arg())
-            .arg(gas_limit::arg())
             .arg(transferred_value::arg())
             .arg(chunked_args::arg())
     }
@@ -2095,7 +2064,6 @@ pub(super) fn build_transaction_str_params(
     let payment_amount = payment_amount::get(matches);
     let receipt = receipt::get(matches);
     let standard_payment = standard_payment::get(matches);
-    let gas_limit = gas_limit::get(matches);
 
     let maybe_output_path = output::get(matches).unwrap_or_default();
     let initiator_addr = initiator_address::get(matches);
@@ -2123,7 +2091,6 @@ pub(super) fn build_transaction_str_params(
             transferred_value: transferred_value::get(matches)
                 .map(|tv| tv.as_str())
                 .unwrap_or_default(),
-            gas_limit,
             session_entry_point,
             chunked_args,
         }
