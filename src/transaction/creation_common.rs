@@ -1374,6 +1374,7 @@ pub(super) mod add_bid {
             .arg(maximum_delegation_amount::arg())
     }
 }
+
 pub(super) mod withdraw_bid {
     use super::*;
     use crate::cli::TransactionBuilderParams;
@@ -1418,6 +1419,7 @@ pub(super) mod withdraw_bid {
             .arg(transaction_amount::arg())
     }
 }
+
 pub(super) mod delegate {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1479,7 +1481,7 @@ pub(super) mod undelegate {
 
     const ACCEPT_SESSION_ARGS: bool = false;
 
-    const ABOUT: &str = "Creates a new delegate transaction";
+    const ABOUT: &str = "Creates a new undelegate transaction";
 
     pub fn build() -> Command {
         apply_common_creation_options(
@@ -1522,6 +1524,7 @@ pub(super) mod undelegate {
             .arg(transaction_amount::arg())
     }
 }
+
 pub(super) mod redelegate {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1529,7 +1532,7 @@ pub(super) mod redelegate {
     pub const NAME: &str = "redelegate";
 
     const ACCEPT_SESSION_ARGS: bool = false;
-    const ABOUT: &str = "Creates a new delegate transaction";
+    const ABOUT: &str = "Creates a new redelegate transaction";
 
     pub fn build() -> Command {
         apply_common_creation_options(
