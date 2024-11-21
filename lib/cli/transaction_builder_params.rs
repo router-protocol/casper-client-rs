@@ -1,6 +1,7 @@
-use casper_types::bytesrepr::Bytes;
-use casper_types::TransactionRuntime;
-use casper_types::{AddressableEntityHash, PackageHash, PublicKey, TransferTarget, URef, U512};
+use casper_types::{
+    bytesrepr::Bytes, system::auction::Reservation, AddressableEntityHash, PackageHash, PublicKey,
+    TransactionRuntime, TransferTarget, URef, U512,
+};
 
 /// An enum representing the parameters needed to construct a transaction builder
 /// for the commands concerning the creation of a transaction
@@ -19,6 +20,8 @@ pub enum TransactionBuilderParams<'a> {
         minimum_delegation_amount: u64,
         /// The maximum amount to be delegated
         maximum_delegation_amount: u64,
+        /// Number of delegator slots which can be reserved for specific delegators
+        reserved_slots: u32,
     },
     /// Parameters for the delegate variant of the transaction builder
     Delegate {
@@ -48,6 +51,25 @@ pub enum TransactionBuilderParams<'a> {
         amount: U512,
         /// The new validator for the redelegate transaction
         new_validator: PublicKey,
+    },
+    /// Parameters for the change bid public key variant of the transaction builder
+    ChangeBidPublicKey {
+        /// The validator for the change bid public key transaction
+        public_key: PublicKey,
+        /// New validator for the change bid public key transaction
+        new_public_key: PublicKey,
+    },
+    /// Parameters for the add reservations variant of the transaction builder
+    AddReservations {
+        /// List of reservations for the add reservations transaction
+        reservations: Vec<Reservation>,
+    },
+    /// Parameters for the cancel reservations variant of the transaction builder
+    CancelReservations {
+        /// The validator for the cancel reservations transaction
+        validator: PublicKey,
+        /// List of delegatora for the cancel reservations transaction
+        delegators: Vec<PublicKey>,
     },
     /// Parameters for the invocable entity variant of the transaction builder
     InvocableEntity {
