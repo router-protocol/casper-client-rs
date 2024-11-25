@@ -249,8 +249,9 @@ pub fn make_transaction_builder(
                 public_key,
                 delegation_rate,
                 amount,
-                minimum_delegation_amount,
-                maximum_delegation_amount,
+                Some(minimum_delegation_amount),
+                Some(maximum_delegation_amount),
+                None, //TODO - fix this, CLI should handle this parameter
             )?;
             Ok(transaction_builder)
         }
