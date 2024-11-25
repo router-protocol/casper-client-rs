@@ -632,7 +632,7 @@ fn contract_hash(value: &str) -> Result<Option<HashAddr>, CliError> {
     match Digest::from_hex(value) {
         Ok(digest) => Ok(Some(digest.value())),
         Err(error) => match Key::from_formatted_str(value) {
-            Ok(Key::Hash(hash)) | Ok(Key::Package(hash)) => Ok(Some(hash)),
+            Ok(Key::Hash(hash)) | Ok(Key::SmartContract(hash)) => Ok(Some(hash)),
             _ => Err(CliError::FailedToParseDigest {
                 context: "contract hash",
                 error,
