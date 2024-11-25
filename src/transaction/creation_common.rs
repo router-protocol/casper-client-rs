@@ -991,7 +991,7 @@ pub(super) mod package_addr {
                         error,
                     })?;
                 match package_addr {
-                    Key::Package(package_addr) => Ok(package_addr),
+                    Key::SmartContract(package_addr) => Ok(package_addr),
                     _ => Err(CliError::Core(Error::InvalidKeyVariant {
                         expected_variant: "Package Address".to_string(),
                         actual: package_addr,
