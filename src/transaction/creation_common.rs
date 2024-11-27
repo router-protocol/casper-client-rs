@@ -8,6 +8,7 @@ use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 use casper_client::cli::{
     json_args_help, simple_args_help, CliError, TransactionBuilderParams, TransactionStrParams,
 };
+use casper_types::TransactionRuntime;
 
 use crate::common;
 
@@ -583,7 +584,7 @@ pub(super) mod transaction_runtime {
 
     const ARG_VALUE_NAME: &str = "vm-casper-v1|vm-casper-v2";
     const ARG_HELP: &str = "Transaction runtime";
-    const ARG_DEFAULT: &str = TransactionRuntime::VM_CASPER_V2;
+    const ARG_DEFAULT: &str = TransactionRuntime::VM_CASPER_V1;
 
     pub(in crate::transaction) fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -862,7 +863,7 @@ pub(super) mod transferred_value {
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
-            .required(true)
+            .required(false)
             .long(ARG_NAME)
             .short(ARG_SHORT)
             .value_name(ARG_VALUE_NAME)
@@ -870,8 +871,22 @@ pub(super) mod transferred_value {
             .display_order(DisplayOrder::TransferredValue as usize)
     }
 
-    pub(super) fn get(matches: &ArgMatches) -> Option<&String> {
+    pub(super) fn get_raw(matches: &ArgMatches) -> Option<&String> {
         matches.get_one(ARG_NAME)
+    }
+
+    pub(super) fn get(matches: &ArgMatches) -> Result<Option<u64>, CliError> {
+        let maybe_result = matches.get_one::<String>(ARG_NAME).map(|str| {
+            str.parse::<u64>()
+                .map_err(|err| CliError::FailedToParseInt {
+                    context: "Transferred value",
+                    error: err,
+                })
+        });
+        match maybe_result {
+            Some(res) => res.map(Some),
+            None => Ok(None),
+        }
     }
 }
 
@@ -1611,14 +1626,14 @@ pub(super) mod invocable_entity {
         let runtime = transaction_runtime::get(matches);
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let transferred_value = transferred_value::get(matches)
-            .map(|value| value.parse::<u64>().unwrap())
-            .unwrap_or_default();
+        let maybe_transferred_value = transferred_value::get(matches)?;
 
+        let runtime = runtime.cloned().unwrap_or_default().into();
+        let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_addr.into(), // TODO: Skip `entity_addr` and match directly for hash?
             entry_point,
-            runtime: runtime.cloned().unwrap_or_default().into(),
+            runtime,
             transferred_value,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
@@ -1669,10 +1684,8 @@ pub(super) mod invocable_entity_alias {
             .cloned()
             .unwrap_or_default()
             .into();
-        let transferred_value = transferred_value::get(matches)
-            .map(|value| value.parse::<u64>().unwrap())
-            .unwrap_or_default();
-
+        let maybe_transferred_value = transferred_value::get(matches)?;
+        let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
             entry_point,
@@ -1727,9 +1740,8 @@ pub(super) mod package {
             .into();
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let transferred_value = transferred_value::get(matches)
-            .map(|value| value.parse::<u64>().unwrap())
-            .unwrap_or_default();
+        let maybe_transferred_value = transferred_value::get(matches)?;
+        let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
             maybe_entity_version,
@@ -1786,9 +1798,8 @@ pub(super) mod package_alias {
             .cloned()
             .unwrap_or_default()
             .into();
-        let transferred_value = transferred_value::get(matches)
-            .map(|value| value.parse::<u64>().unwrap())
-            .unwrap_or_default();
+        let maybe_transferred_value = transferred_value::get(matches)?;
+        let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
 
         let params = TransactionBuilderParams::PackageAlias {
             package_alias,
@@ -1851,15 +1862,13 @@ pub(super) mod session {
             parse::transaction_module_bytes(transaction_path_str.unwrap_or_default())?;
 
         let is_install_upgrade: bool = is_install_upgrade::get(matches);
-
         let runtime = transaction_runtime::get(matches)
             .cloned()
             .unwrap_or_default()
             .into();
 
-        let transferred_value = transferred_value::get(matches)
-            .map(|value| value.parse::<u64>().unwrap())
-            .unwrap_or_default();
+        let maybe_transferred_value = transferred_value::get(matches)?;
+        let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let seed = None; // TODO: support seeds
 
         let params = TransactionBuilderParams::Session {
@@ -2088,7 +2097,7 @@ pub(super) fn build_transaction_str_params(
             additional_computation_factor,
             receipt,
             standard_payment,
-            transferred_value: transferred_value::get(matches)
+            transferred_value: transferred_value::get_raw(matches)
                 .map(|tv| tv.as_str())
                 .unwrap_or_default(),
             session_entry_point,
@@ -2148,6 +2157,34 @@ pub(super) fn parse_rpc_args_and_run(
         rpc_id,
         verbosity_level,
     ))
+}
+
+fn map_maybe_transferred(
+    maybe_transferred_value: Option<u64>,
+    runtime: &TransactionRuntime,
+) -> Result<u64, CliError> {
+    match runtime {
+        TransactionRuntime::VmCasperV1 => {
+            if maybe_transferred_value.is_some() {
+                Err(CliError::InvalidArgument {
+                    context: "transferred_value",
+                    error: "Argument `transferred-value` has no usage in V1 execution engine VM (if you provided no execution engine vm parameter, V1 is the default)".to_string(),
+                })
+            } else {
+                Ok(0)
+            }
+        }
+        TransactionRuntime::VmCasperV2 => {
+            if let Some(transferred_value) = maybe_transferred_value {
+                Ok(transferred_value)
+            } else {
+                Err(CliError::InvalidArgument {
+                    context: "transferred_value",
+                    error: "VmCasperV2 requires `transferred-value` argument".to_string(),
+                })
+            }
+        }
+    }
 }
 
 #[cfg(test)]
