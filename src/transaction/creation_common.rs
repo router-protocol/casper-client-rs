@@ -1598,8 +1598,8 @@ pub(super) mod withdraw_bid {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(withdraw_bid_subcommand: Command) -> Command {
+        withdraw_bid_subcommand
             .arg(public_key::arg(DisplayOrder::PublicKey as usize))
             .arg(transaction_amount::arg())
     }
@@ -1650,8 +1650,8 @@ pub(super) mod delegate {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(delegate_subcommand: Command) -> Command {
+        delegate_subcommand
             .arg(delegator::arg())
             .arg(validator::arg())
             .arg(transaction_amount::arg())
@@ -1702,8 +1702,8 @@ pub(super) mod undelegate {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(undelegate_subcommand: Command) -> Command {
+        undelegate_subcommand
             .arg(delegator::arg())
             .arg(validator::arg())
             .arg(transaction_amount::arg())
@@ -1757,8 +1757,8 @@ pub(super) mod redelegate {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(redelegate_subcommand: Command) -> Command {
+        redelegate_subcommand
             .arg(delegator::arg())
             .arg(validator::arg())
             .arg(new_validator::arg())
@@ -1949,8 +1949,8 @@ pub(super) mod invocable_entity {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(invocable_entity_subcommand: Command) -> Command {
+        invocable_entity_subcommand
             .arg(entity_addr::arg())
             .arg(session_entry_point::arg())
             .arg(transaction_runtime::arg())
@@ -1958,6 +1958,7 @@ pub(super) mod invocable_entity {
             .arg(chunked_args::arg())
     }
 }
+
 pub(super) mod invocable_entity_alias {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -2007,12 +2008,13 @@ pub(super) mod invocable_entity_alias {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(invocable_entity_alias_subcommand: Command) -> Command {
+        invocable_entity_alias_subcommand
             .arg(entity_alias_arg::arg())
             .arg(session_entry_point::arg())
     }
 }
+
 pub(super) mod package {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -2065,13 +2067,14 @@ pub(super) mod package {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(package_subcommand: Command) -> Command {
+        package_subcommand
             .arg(package_addr::arg())
             .arg(session_version::arg())
             .arg(session_entry_point::arg())
     }
 }
+
 pub(super) mod package_alias {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -2125,13 +2128,14 @@ pub(super) mod package_alias {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(package_alias_subcommand: Command) -> Command {
+        package_alias_subcommand
             .arg(package_name_arg::arg())
             .arg(session_version::arg())
             .arg(session_entry_point::arg())
     }
 }
+
 pub(super) mod session {
     use super::*;
     use crate::cli::parse;
@@ -2197,8 +2201,8 @@ pub(super) mod session {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(session_subcommand: Command) -> Command {
+        session_subcommand
             .arg(transaction_path::arg())
             .arg(session_entry_point::arg())
             .arg(is_install_upgrade::arg(
@@ -2263,8 +2267,8 @@ pub(super) mod transfer {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(transfer_subcommand: Command) -> Command {
+        transfer_subcommand
             .arg(source::arg())
             .arg(target::arg())
             .arg(transfer_amount::arg())
