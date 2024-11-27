@@ -1199,13 +1199,20 @@ mod minimum_delegation_amount {
             .unwrap_or_default()
     }
 
-    pub(super) fn parse_delegation_amount(value: &str) -> Result<u64, CliError> {
-        value
-            .parse::<u64>()
-            .map_err(|err| CliError::FailedToParseInt {
-                context: "Add Bid: Minimum delegation amount",
-                error: err,
-            })
+    pub(super) fn parse_delegation_amount(value: &str) -> Result<Option<u64>, CliError> {
+        let delegation_amount = if value.is_empty() {
+            None
+        } else {
+            Some(
+                value
+                    .parse::<u64>()
+                    .map_err(|err| CliError::FailedToParseInt {
+                        context: "Add Bid: Minimum delegation amount",
+                        error: err,
+                    })?,
+            )
+        };
+        Ok(delegation_amount)
     }
 }
 
@@ -1234,13 +1241,20 @@ mod maximum_delegation_amount {
             .unwrap_or_default()
     }
 
-    pub(super) fn parse_delegation_amount(value: &str) -> Result<u64, CliError> {
-        value
-            .parse::<u64>()
-            .map_err(|err| CliError::FailedToParseInt {
-                context: "Add Bid: Maximum delegation amount",
-                error: err,
-            })
+    pub(super) fn parse_delegation_amount(value: &str) -> Result<Option<u64>, CliError> {
+        let delegation_amount = if value.is_empty() {
+            None
+        } else {
+            Some(
+                value
+                    .parse::<u64>()
+                    .map_err(|err| CliError::FailedToParseInt {
+                        context: "Add Bid: Maximum delegation amount",
+                        error: err,
+                    })?,
+            )
+        };
+        Ok(delegation_amount)
     }
 }
 
@@ -1267,13 +1281,20 @@ mod reserved_slots {
             .unwrap_or_default()
     }
 
-    pub(super) fn parse_reserved_slots(value: &str) -> Result<u32, CliError> {
-        value
-            .parse::<u32>()
-            .map_err(|err| CliError::FailedToParseInt {
-                context: "Add Bid: Reserved slots",
-                error: err,
-            })
+    pub(super) fn parse_reserved_slots(value: &str) -> Result<Option<u32>, CliError> {
+        let delegation_amount = if value.is_empty() {
+            None
+        } else {
+            Some(
+                value
+                    .parse::<u32>()
+                    .map_err(|err| CliError::FailedToParseInt {
+                        context: "Add Bid: Reserved slots",
+                        error: err,
+                    })?,
+            )
+        };
+        Ok(delegation_amount)
     }
 }
 
@@ -1393,7 +1414,7 @@ mod reservations {
     use casper_types::system::auction::Reservation;
 
     pub const ARG_NAME: &str = "reservations";
-    const ARG_VALUE_NAME: &str = "Vec<Reservation>";
+    const ARG_VALUE_NAME: &str = "JSON serialized Vec<Reservation>";
     const ARG_HELP: &str = "list of reservations to add for the add-reservations transaction";
 
     pub fn arg() -> Arg {
@@ -1434,7 +1455,7 @@ mod delegators {
     use casper_types::PublicKey;
 
     pub const ARG_NAME: &str = "delegators";
-    const ARG_VALUE_NAME: &str = "Vec<PublicKey>";
+    const ARG_VALUE_NAME: &str = "JSON serialized Vec<PublicKey>";
     const ARG_HELP: &str = "list of delegator public keys for the cancel-reservations transaction";
 
     pub fn arg() -> Arg {

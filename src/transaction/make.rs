@@ -4,8 +4,9 @@ use clap::{ArgMatches, Command};
 use casper_client::cli::CliError;
 
 use super::creation_common::{
-    add_bid, delegate, invocable_entity, invocable_entity_alias, package, package_alias,
-    redelegate, session, transfer, undelegate, withdraw_bid, DisplayOrder,
+    add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
+    invocable_entity, invocable_entity_alias, package, package_alias, redelegate, session,
+    transfer, undelegate, withdraw_bid, DisplayOrder,
 };
 
 use crate::{command::ClientCommand, common, Success};
@@ -29,6 +30,9 @@ impl ClientCommand for MakeTransaction {
             .subcommand(delegate::build())
             .subcommand(undelegate::build())
             .subcommand(redelegate::build())
+            .subcommand(change_bid_public_key::build())
+            .subcommand(add_reservations::build())
+            .subcommand(cancel_reservations::build())
             .subcommand(invocable_entity::build())
             .subcommand(invocable_entity_alias::build())
             .subcommand(package::build())
@@ -49,6 +53,9 @@ impl ClientCommand for MakeTransaction {
                 delegate::NAME => delegate::run(matches)?,
                 undelegate::NAME => undelegate::run(matches)?,
                 redelegate::NAME => redelegate::run(matches)?,
+                change_bid_public_key::NAME => change_bid_public_key::run(matches)?,
+                add_reservations::NAME => cancel_reservations::run(matches)?,
+                cancel_reservations::NAME => cancel_reservations::run(matches)?,
                 invocable_entity::NAME => invocable_entity::run(matches)?,
                 invocable_entity_alias::NAME => invocable_entity_alias::run(matches)?,
                 package::NAME => package::run(matches)?,

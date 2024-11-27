@@ -543,9 +543,9 @@ mod transaction {
             public_key,
             delegation_rate: 0,
             amount,
-            minimum_delegation_amount,
-            maximum_delegation_amount,
-            reserved_slots: 0,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: None,
         };
 
         let transaction =
@@ -1582,9 +1582,9 @@ mod transaction {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
             delegation_rate: 0,
             amount: U512::from(10),
-            minimum_delegation_amount,
-            maximum_delegation_amount,
-            reserved_slots: 0,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: None,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1620,9 +1620,9 @@ mod transaction {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
             delegation_rate: 0,
             amount: U512::from(10),
-            minimum_delegation_amount,
-            maximum_delegation_amount,
-            reserved_slots: 0,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: Some(0),
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, false);

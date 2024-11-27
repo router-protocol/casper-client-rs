@@ -17,11 +17,11 @@ pub enum TransactionBuilderParams<'a> {
         /// The amount to be bid in the add bid transaction
         amount: U512,
         /// The minimum amount to be delegated
-        minimum_delegation_amount: u64,
+        minimum_delegation_amount: Option<u64>,
         /// The maximum amount to be delegated
-        maximum_delegation_amount: u64,
+        maximum_delegation_amount: Option<u64>,
         /// Number of delegator slots which can be reserved for specific delegators
-        reserved_slots: u32,
+        reserved_slots: Option<u32>,
     },
     /// Parameters for the delegate variant of the transaction builder
     Delegate {

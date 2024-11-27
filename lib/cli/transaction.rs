@@ -250,9 +250,9 @@ pub fn make_transaction_builder(
                 public_key,
                 delegation_rate,
                 amount,
-                Some(minimum_delegation_amount),
-                Some(maximum_delegation_amount),
-                Some(reserved_slots),
+                minimum_delegation_amount,
+                maximum_delegation_amount,
+                reserved_slots,
             )?;
             Ok(transaction_builder)
         }
