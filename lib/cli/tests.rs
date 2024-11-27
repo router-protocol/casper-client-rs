@@ -454,7 +454,7 @@ mod transaction {
     use once_cell::sync::Lazy;
     use serde_json::json;
     static SAMPLE_TRANSACTION: Lazy<serde_json::Value> = Lazy::new(|| {
-        json!({
+        json!({"Version1": {
             "hash": "57144349509f7cb9374e0f38b4e4910526b397a38f0dc21eaae1df916df66aae",
             "payload": {
                 "initiator_addr": {
@@ -470,14 +470,28 @@ mod transaction {
                 }
                 },
                 "fields": {
-                    "0": "020000000600000074617267657421000000722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d010c06000000616d6f756e7402000000010a08",
-                    "1": "010000000000000000000100000000",
-                    "2": "010000000000000000000100000002",
-                    "3": "010000000000000000000100000000",
+                  "args": {
+                    "Named": [
+                      [
+                        "xyz",
+                        {
+                          "bytes": "0d0000001af81d860f238f832b8f8e648c",
+                          "cl_type": {
+                            "List": "U8"
+                          }
+                        }
+                      ]
+                    ]
+                  },
+                  "entry_point": "AddBid",
+                  "scheduling": {
+                    "FutureEra": 195120
+                  },
+                  "target": "Native"
                 }
             },
             "approvals": [],
-        })
+        }})
     });
     const SAMPLE_DIGEST: &str =
         "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d";
@@ -550,11 +564,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "add-bid-test");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "add-bid-test");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -563,9 +576,7 @@ mod transaction {
                 .unwrap(),
             public_key_cl
         );
-        assert!(transaction
-            .as_ref()
-            .unwrap()
+        assert!(transaction_v1
             .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
             .unwrap()
             .into_named()
@@ -573,9 +584,7 @@ mod transaction {
             .get("delegation_rate")
             .is_some());
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -628,11 +637,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "delegate");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "delegate");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -642,9 +650,7 @@ mod transaction {
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -654,9 +660,7 @@ mod transaction {
             delegator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -705,11 +709,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "withdraw-bid");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "withdraw-bid");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -719,9 +722,7 @@ mod transaction {
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -775,11 +776,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "undelegate");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "undelegate");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -789,9 +789,7 @@ mod transaction {
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -801,9 +799,7 @@ mod transaction {
             delegator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -859,11 +855,10 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "redelegate");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "redelegate");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -873,9 +868,7 @@ mod transaction {
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -885,9 +878,7 @@ mod transaction {
             delegator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -897,9 +888,7 @@ mod transaction {
             validator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -953,22 +942,16 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "invocable-entity");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "invocable-entity"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             *entry_point_ref
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
@@ -1011,27 +994,22 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "invocable-entity-alias");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "invocable-entity-alias"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Custom("entry-point-alias".to_string())
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
         );
     }
+
     #[test]
     fn should_create_package_transaction() {
         let package_addr: PackageAddr = vec![0u8; 32].as_slice().try_into().unwrap();
@@ -1075,24 +1053,22 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "package");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "package");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Custom("test-entry-point-package".to_string())
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
         );
     }
+
     #[test]
     fn should_create_package_alias_transaction() {
         let package_name = String::from("package-name");
@@ -1136,19 +1112,16 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "package");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "package");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Custom("test-entry-point-package".to_string())
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
@@ -1195,24 +1168,22 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "session");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "session");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Call
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
         );
     }
+
     #[test]
     fn should_create_transfer_transaction() {
         let source_uref = URef::from_formatted_str(
@@ -1260,19 +1231,16 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "transfer");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "transfer");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Transfer
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -1282,9 +1250,7 @@ mod transaction {
             source_uref_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -1293,6 +1259,17 @@ mod transaction {
                 .unwrap(),
             target_uref_cl
         );
+    }
+
+    fn unwrap_transaction(
+        transaction: Result<casper_types::Transaction, CliError>,
+    ) -> casper_types::TransactionV1 {
+        match transaction.unwrap() {
+            casper_types::Transaction::Deploy(_) => {
+                unreachable!("Expected transaction, got deploy")
+            }
+            casper_types::Transaction::V1(transaction_v1) => transaction_v1,
+        }
     }
     #[test]
     fn should_fail_to_create_transaction_with_no_secret_or_public_key() {

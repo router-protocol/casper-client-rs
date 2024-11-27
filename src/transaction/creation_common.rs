@@ -871,8 +871,22 @@ pub(super) mod transferred_value {
             .display_order(DisplayOrder::TransferredValue as usize)
     }
 
-    pub(super) fn get(matches: &ArgMatches) -> Option<&String> {
+    pub(super) fn get_raw(matches: &ArgMatches) -> Option<&String> {
         matches.get_one(ARG_NAME)
+    }
+
+    pub(super) fn get(matches: &ArgMatches) -> Result<Option<u64>, CliError> {
+        let maybe_result = matches.get_one::<String>(ARG_NAME).map(|str| {
+            str.parse::<u64>()
+                .map_err(|err| CliError::FailedToParseInt {
+                    context: "Transferred value",
+                    error: err,
+                })
+        });
+        match maybe_result {
+            Some(res) => res.map(Some),
+            None => Ok(None),
+        }
     }
 }
 
@@ -1612,8 +1626,7 @@ pub(super) mod invocable_entity {
         let runtime = transaction_runtime::get(matches);
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let maybe_transferred_value =
-            transferred_value::get(matches).map(|value| value.parse::<u64>().unwrap());
+        let maybe_transferred_value = transferred_value::get(matches)?;
 
         let runtime = runtime.cloned().unwrap_or_default().into();
         let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
@@ -1671,8 +1684,7 @@ pub(super) mod invocable_entity_alias {
             .cloned()
             .unwrap_or_default()
             .into();
-        let maybe_transferred_value =
-            transferred_value::get(matches).map(|value| value.parse::<u64>().unwrap());
+        let maybe_transferred_value = transferred_value::get(matches)?;
         let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
@@ -1728,8 +1740,7 @@ pub(super) mod package {
             .into();
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let maybe_transferred_value =
-            transferred_value::get(matches).map(|value| value.parse::<u64>().unwrap());
+        let maybe_transferred_value = transferred_value::get(matches)?;
         let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
@@ -1787,8 +1798,7 @@ pub(super) mod package_alias {
             .cloned()
             .unwrap_or_default()
             .into();
-        let maybe_transferred_value =
-            transferred_value::get(matches).map(|value| value.parse::<u64>().unwrap());
+        let maybe_transferred_value = transferred_value::get(matches)?;
         let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
 
         let params = TransactionBuilderParams::PackageAlias {
@@ -1857,8 +1867,7 @@ pub(super) mod session {
             .unwrap_or_default()
             .into();
 
-        let maybe_transferred_value =
-            transferred_value::get(matches).map(|value| value.parse::<u64>().unwrap());
+        let maybe_transferred_value = transferred_value::get(matches)?;
         let transferred_value = map_maybe_transferred(maybe_transferred_value, &runtime)?;
         let seed = None; // TODO: support seeds
 
@@ -2088,7 +2097,7 @@ pub(super) fn build_transaction_str_params(
             additional_computation_factor,
             receipt,
             standard_payment,
-            transferred_value: transferred_value::get(matches)
+            transferred_value: transferred_value::get_raw(matches)
                 .map(|tv| tv.as_str())
                 .unwrap_or_default(),
             session_entry_point,
