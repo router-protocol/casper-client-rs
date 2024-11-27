@@ -383,7 +383,7 @@ pub fn make_transaction_builder(
             new_public_key,
         } => {
             let transaction_builder =
-                TransactionV1Builder::new_change_bid_public_key::<u64>(public_key, new_public_key)?;
+                TransactionV1Builder::new_change_bid_public_key(public_key, new_public_key)?;
             Ok(transaction_builder)
         }
         TransactionBuilderParams::AddReservations { reservations } => {
