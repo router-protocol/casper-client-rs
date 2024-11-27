@@ -1058,7 +1058,7 @@ pub(super) mod session_entry_point {
             .long(ARG_NAME)
             .value_name(ARG_VALUE_NAME)
             .help(ARG_HELP)
-            .required(true)
+            .required(false)
             .display_order(DisplayOrder::SessionEntryPoint as usize)
     }
 
@@ -2395,12 +2395,12 @@ pub(super) fn build_transaction_str_params(
 
     let maybe_output_path = output::get(matches).unwrap_or_default();
     let initiator_addr = initiator_address::get(matches);
-    let session_entry_point = session_entry_point::get(matches);
-    let chunked_args = chunked_args::get(matches);
 
     if obtain_session_args {
         let session_args_simple = arg_simple::session::get(matches);
         let session_args_json = args_json::session::get(matches);
+        let session_entry_point = session_entry_point::get(matches);
+        let chunked_args = chunked_args::get(matches);
         TransactionStrParams {
             secret_key,
             timestamp,
