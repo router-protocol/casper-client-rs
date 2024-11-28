@@ -25,6 +25,7 @@ pub mod deploy;
 mod deploy_str_params;
 mod dictionary_item_str_params;
 mod error;
+mod fields_container;
 mod json_args;
 pub mod parse;
 mod payment_str_params;
@@ -35,6 +36,7 @@ mod tests;
 mod transaction;
 mod transaction_builder_params;
 mod transaction_str_params;
+mod transaction_v1_builder;
 
 #[cfg(feature = "std-fs-io")]
 use serde::Serialize;
@@ -73,6 +75,7 @@ pub use deploy::{
 pub use deploy_str_params::DeployStrParams;
 pub use dictionary_item_str_params::DictionaryItemStrParams;
 pub use error::{CliError, FromDecStrErr};
+pub(crate) use fields_container::{FieldsContainer, FieldsContainerError};
 pub use json_args::{
     help as json_args_help, Error as JsonArgsError, ErrorDetails as JsonArgsErrorDetails, JsonArg,
 };
@@ -86,6 +89,7 @@ pub use transaction::{
 };
 pub use transaction_builder_params::TransactionBuilderParams;
 pub use transaction_str_params::TransactionStrParams;
+pub(crate) use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
 
 /// Retrieves a [`casper_types::Deploy`] from the network.
 ///

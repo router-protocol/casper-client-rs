@@ -6,7 +6,7 @@ use casper_types::{bytesrepr::Error as ToBytesError, crypto, Key};
 #[cfg(doc)]
 use casper_types::{CLValue, Deploy, DeployBuilder, TimeDiff, Timestamp, URef};
 
-use crate::{validation::ValidateResponseError, JsonRpcId};
+use crate::{cli::TransactionV1BuilderError, validation::ValidateResponseError, JsonRpcId};
 
 /// Errors that may be returned by `casper_client` functions.
 #[derive(Error, Debug)]
@@ -21,7 +21,7 @@ pub enum Error {
 
     /// Failed to build Transaction
     #[error(transparent)]
-    TransactionBuild(#[from] casper_types::TransactionV1BuilderError),
+    TransactionBuild(#[from] TransactionV1BuilderError),
     /// Invalid [`Key`] variant.
     #[error("expected {} but got {}", .expected_variant, .actual)]
     InvalidKeyVariant {

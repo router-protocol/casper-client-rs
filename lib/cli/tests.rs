@@ -445,11 +445,10 @@ fn should_fail_to_create_deploy_with_payment_and_session_with_no_secret_key_whil
 
 mod transaction {
     use super::*;
-    use crate::Error::TransactionBuild;
+    use crate::{cli::TransactionV1BuilderError, Error::TransactionBuild};
     use casper_types::{
         bytesrepr::Bytes, PackageAddr, TransactionArgs, TransactionEntryPoint,
-        TransactionInvocationTarget, TransactionRuntime, TransactionTarget,
-        TransactionV1BuilderError, TransferTarget,
+        TransactionInvocationTarget, TransactionRuntime, TransactionTarget, TransferTarget,
     };
     use once_cell::sync::Lazy;
     use serde_json::json;
