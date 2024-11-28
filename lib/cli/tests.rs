@@ -338,7 +338,7 @@ fn should_fail_to_create_deploy_with_no_session_account() {
     assert!(matches!(
         deploy.unwrap_err(),
         CliError::Core(Error::DeployBuild(
-            casper_types::DeployBuilderError::DeployMissingSessionAccount
+            DeployBuilderError::DeployMissingSessionAccount
         ))
     ));
 }
@@ -384,7 +384,7 @@ fn should_fail_to_create_transfer_without_account() {
     assert!(matches!(
         transfer_deploy.unwrap_err(),
         CliError::Core(Error::DeployBuild(
-            casper_types::DeployBuilderError::DeployMissingSessionAccount
+            DeployBuilderError::DeployMissingSessionAccount
         ))
     ));
 }

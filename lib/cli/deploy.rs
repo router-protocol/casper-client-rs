@@ -1,12 +1,17 @@
 use casper_types::{
-    account::AccountHash, AsymmetricType, Deploy, DeployBuilder, PublicKey, TransferTarget,
-    UIntParseError, URef, U512,
+    account::AccountHash, AsymmetricType, Deploy, PublicKey, TransferTarget, UIntParseError, URef,
+    U512,
 };
 
-use super::transaction::get_maybe_secret_key;
-use super::{parse, CliError, DeployStrParams, PaymentStrParams, SessionStrParams};
-use crate::rpcs::results::{PutDeployResult, SpeculativeExecResult};
-use crate::{SuccessResponse, MAX_SERIALIZED_SIZE_OF_DEPLOY};
+use super::{
+    parse, transaction::get_maybe_secret_key, CliError, DeployStrParams, PaymentStrParams,
+    SessionStrParams,
+};
+use crate::{
+    cli::DeployBuilder,
+    rpcs::results::{PutDeployResult, SpeculativeExecResult},
+    SuccessResponse, MAX_SERIALIZED_SIZE_OF_DEPLOY,
+};
 
 const DEFAULT_GAS_PRICE: u64 = 1;
 

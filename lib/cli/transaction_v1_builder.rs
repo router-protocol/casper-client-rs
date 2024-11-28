@@ -495,7 +495,7 @@ impl<'a> TransactionV1Builder<'a> {
         self.do_build()
     }
 
-    fn build_transaction(
+    fn build_transaction_inner(
         chain_name: String,
         timestamp: Timestamp,
         ttl: TimeDiff,
@@ -526,46 +526,6 @@ impl<'a> TransactionV1Builder<'a> {
         transaction
     }
 
-    #[cfg(not(test))]
-    fn do_build(self) -> Result<TransactionV1, TransactionV1BuilderError> {
-        let initiator_addr_and_secret_key = match (self.initiator_addr, self.secret_key) {
-            (Some(initiator_addr), Some(secret_key)) => InitiatorAddrAndSecretKey::Both {
-                initiator_addr,
-                secret_key,
-            },
-            (Some(initiator_addr), None) => {
-                InitiatorAddrAndSecretKey::InitiatorAddr(initiator_addr)
-            }
-            (None, Some(secret_key)) => InitiatorAddrAndSecretKey::SecretKey(secret_key),
-            (None, None) => return Err(TransactionV1BuilderError::MissingInitiatorAddr),
-        };
-
-        let chain_name = self
-            .chain_name
-            .ok_or(TransactionV1BuilderError::MissingChainName)?;
-
-        let container =
-            FieldsContainer::new(self.args, self.target, self.entry_point, self.scheduling)
-                .to_map()
-                .map_err(|err| match err {
-                    FieldsContainerError::CouldNotSerializeField { field_index } => {
-                        TransactionV1BuilderError::CouldNotSerializeField { field_index }
-                    }
-                })?;
-
-        let transaction = Self::build_transaction(
-            chain_name,
-            self.timestamp,
-            self.ttl,
-            self.pricing_mode,
-            container,
-            initiator_addr_and_secret_key,
-        );
-
-        Ok(transaction)
-    }
-
-    #[cfg(test)]
     fn do_build(self) -> Result<TransactionV1, TransactionV1BuilderError> {
         let initiator_addr_and_secret_key = match (self.initiator_addr, &self.secret_key) {
             (Some(initiator_addr), Some(secret_key)) => InitiatorAddrAndSecretKey::Both {
@@ -582,6 +542,7 @@ impl<'a> TransactionV1Builder<'a> {
         let chain_name = self
             .chain_name
             .ok_or(TransactionV1BuilderError::MissingChainName)?;
+
         let container =
             FieldsContainer::new(self.args, self.target, self.entry_point, self.scheduling)
                 .to_map()
@@ -591,7 +552,7 @@ impl<'a> TransactionV1Builder<'a> {
                     }
                 })?;
 
-        let transaction = Self::build_transaction(
+        let transaction = Self::build_transaction_inner(
             chain_name,
             self.timestamp,
             self.ttl,
