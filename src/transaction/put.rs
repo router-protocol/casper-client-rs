@@ -4,7 +4,7 @@ use clap::{ArgMatches, Command};
 use casper_client::cli::CliError;
 
 use super::creation_common::{
-    add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
+    activate_bid, add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
     invocable_entity, invocable_entity_alias, package, package_alias, redelegate, session,
     transfer, undelegate, withdraw_bid,
 };
@@ -26,8 +26,9 @@ impl ClientCommand for PutTransaction {
             .about(Self::ABOUT)
             .alias(ALIAS)
             .subcommand_required(true)
-            .subcommand(withdraw_bid::put_transaction_build())
             .subcommand(add_bid::put_transaction_build())
+            .subcommand(activate_bid::put_transaction_build())
+            .subcommand(withdraw_bid::put_transaction_build())
             .subcommand(delegate::put_transaction_build())
             .subcommand(undelegate::put_transaction_build())
             .subcommand(redelegate::put_transaction_build())
@@ -53,6 +54,7 @@ impl ClientCommand for PutTransaction {
                 verbosity_level,
             ) = match subcommand {
                 add_bid::NAME => parse_rpc_args_and_run(matches, add_bid::run)?,
+                activate_bid::NAME => parse_rpc_args_and_run(matches, activate_bid::run)?,
                 withdraw_bid::NAME => parse_rpc_args_and_run(matches, withdraw_bid::run)?,
                 delegate::NAME => parse_rpc_args_and_run(matches, delegate::run)?,
                 undelegate::NAME => parse_rpc_args_and_run(matches, undelegate::run)?,

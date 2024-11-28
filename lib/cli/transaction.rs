@@ -378,6 +378,10 @@ pub fn make_transaction_builder(
             let transaction_builder = TransactionV1Builder::new_withdraw_bid(public_key, amount)?;
             Ok(transaction_builder)
         }
+        TransactionBuilderParams::ActivateBid { validator } => {
+            let transaction_builder = TransactionV1Builder::new_activate_bid(validator)?;
+            Ok(transaction_builder)
+        }
         TransactionBuilderParams::ChangeBidPublicKey {
             public_key,
             new_public_key,

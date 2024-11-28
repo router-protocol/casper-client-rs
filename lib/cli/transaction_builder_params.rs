@@ -150,4 +150,9 @@ pub enum TransactionBuilderParams<'a> {
         /// The amount to be withdrawn in the withdraw bid transaction
         amount: U512,
     },
+    /// Parameters for the activate bid variant of the transaction builder
+    ActivateBid {
+        /// The public key for the activate bid transaction
+        validator: PublicKey,
+    },
 }

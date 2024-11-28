@@ -671,6 +671,56 @@ mod transaction {
     }
 
     #[test]
+    fn should_create_activate_bid_transaction() {
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+
+        let validator = PublicKey::from(&secret_key);
+
+        let validator_cl = &CLValue::from_t(&validator).unwrap();
+
+        let transaction_str_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "activate-bid",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "0",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+        let transaction_string_params = transaction_str_params;
+
+        let transaction_builder_params = TransactionBuilderParams::ActivateBid { validator };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        assert_eq!(transaction.as_ref().unwrap().chain_name(), "activate-bid");
+        assert_eq!(
+            transaction
+                .as_ref()
+                .unwrap()
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("validator")
+                .unwrap(),
+            validator_cl
+        );
+    }
+
+    #[test]
     fn should_create_withdraw_bid_transaction() {
         let secret_key = SecretKey::generate_ed25519().unwrap();
 

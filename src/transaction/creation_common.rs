@@ -1302,8 +1302,7 @@ mod validator {
     use super::*;
     pub const ARG_NAME: &str = "validator";
     const ARG_VALUE_NAME: &str = common::ARG_STRING;
-    const ARG_HELP: &str =
-        "the validator's public key (as a formatted string) for the delegate transaction";
+    const ARG_HELP: &str = "the validator's public key (as a formatted string)";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -1557,6 +1556,46 @@ pub(super) mod add_bid {
             .arg(minimum_delegation_amount::arg())
             .arg(maximum_delegation_amount::arg())
             .arg(reserved_slots::arg())
+    }
+}
+
+pub(super) mod activate_bid {
+    use super::*;
+    use casper_client::cli::{CliError, TransactionBuilderParams, TransactionStrParams};
+
+    pub const NAME: &str = "activate-bid";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str = "Creates a new activate-bid transaction";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let validator_str = validator::get(matches);
+        let validator = public_key::parse_public_key(validator_str)?;
+
+        let params = TransactionBuilderParams::ActivateBid { validator };
+
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(activate_bid_subcommand: Command) -> Command {
+        activate_bid_subcommand.arg(validator::arg())
     }
 }
 

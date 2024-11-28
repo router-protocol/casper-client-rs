@@ -4,7 +4,7 @@ use clap::{ArgMatches, Command};
 use casper_client::cli::CliError;
 
 use super::creation_common::{
-    add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
+    activate_bid, add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
     invocable_entity, invocable_entity_alias, package, package_alias, redelegate, session,
     transfer, undelegate, withdraw_bid, DisplayOrder,
 };
@@ -25,8 +25,9 @@ impl ClientCommand for MakeTransaction {
         Command::new(Self::NAME)
             .about(Self::ABOUT)
             .subcommand_required(true)
-            .subcommand(withdraw_bid::build())
             .subcommand(add_bid::build())
+            .subcommand(activate_bid::build())
+            .subcommand(withdraw_bid::build())
             .subcommand(delegate::build())
             .subcommand(undelegate::build())
             .subcommand(redelegate::build())
@@ -49,6 +50,7 @@ impl ClientCommand for MakeTransaction {
         if let Some((subcommand, matches)) = matches.subcommand() {
             let (transaction_builder_params, transaction_str_params) = match subcommand {
                 add_bid::NAME => add_bid::run(matches)?,
+                activate_bid::NAME => activate_bid::run(matches)?,
                 withdraw_bid::NAME => withdraw_bid::run(matches)?,
                 delegate::NAME => delegate::run(matches)?,
                 undelegate::NAME => undelegate::run(matches)?,
