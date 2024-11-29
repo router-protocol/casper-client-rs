@@ -709,11 +709,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "activate-bid");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "activate-bid");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -992,14 +991,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "change-bid-public-key-test");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "change-bid-public-key-test"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -1008,9 +1003,7 @@ mod transaction {
                 .unwrap(),
             public_key_cl
         );
-        assert!(transaction
-            .as_ref()
-            .unwrap()
+        assert!(transaction_v1
             .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
             .unwrap()
             .into_named()
@@ -1018,9 +1011,7 @@ mod transaction {
             .get("new_public_key")
             .is_some());
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -1075,14 +1066,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "add-reservations-test");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "add-reservations-test"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -1140,14 +1127,10 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "cancel-reservations-test");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "cancel-reservations-test"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
@@ -1157,9 +1140,7 @@ mod transaction {
             validator_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
                 .into_named()
