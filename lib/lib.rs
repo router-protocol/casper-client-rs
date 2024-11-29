@@ -49,6 +49,8 @@ mod verbosity;
 mod verification;
 mod verification_types;
 
+extern crate alloc;
+
 #[cfg(any(feature = "std-fs-io", test))]
 use std::{
     env::current_dir,
@@ -60,13 +62,13 @@ use std::{
 #[cfg(feature = "std-fs-io")]
 use serde::Serialize;
 
+#[cfg(any(feature = "std-fs-io", test))]
+use casper_types::SecretKey;
 #[cfg(doc)]
 use casper_types::{account::Account, Block, StoredValue, Transfer};
 use casper_types::{
     Deploy, DeployHash, Digest, Key, PublicKey, Transaction, TransactionHash, URef,
 };
-#[cfg(any(feature = "std-fs-io", test))]
-use casper_types::{SecretKey, TransactionV1};
 
 #[cfg(any(feature = "std-fs-io", test))]
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -223,7 +225,7 @@ pub fn output_deploy(output: OutputKind, deploy: &Deploy) -> Result<(), Error> {
 /// `output` specifies the output file and corresponding overwrite behaviour, or if
 /// `OutputKind::Stdout`, causes the `Transaction` to be printed `stdout`.
 #[cfg(any(feature = "std-fs-io", test))]
-pub fn output_transaction(output: OutputKind, transaction: &TransactionV1) -> Result<(), Error> {
+pub fn output_transaction(output: OutputKind, transaction: &Transaction) -> Result<(), Error> {
     write_transaction(transaction, output.get()?)?;
     output.commit()
 }
@@ -243,7 +245,7 @@ pub fn read_deploy_file<P: AsRef<Path>>(deploy_path: P) -> Result<Deploy, Error>
 
 /// Reads a previously-saved [`Transaction`] from a file.
 #[cfg(any(feature = "std-fs-io", test))]
-pub fn read_transaction_file<P: AsRef<Path>>(transaction_path: P) -> Result<TransactionV1, Error> {
+pub fn read_transaction_file<P: AsRef<Path>>(transaction_path: P) -> Result<Transaction, Error> {
     let input = fs::read(transaction_path.as_ref()).map_err(|error| Error::IoError {
         context: format!(
             "unable to read transaction file at '{}'",
@@ -701,7 +703,7 @@ fn write_deploy<W: Write>(deploy: &Deploy, mut output: W) -> Result<(), Error> {
 }
 
 #[cfg(any(feature = "std-fs-io", test))]
-fn write_transaction<W: Write>(transaction: &TransactionV1, mut output: W) -> Result<(), Error> {
+fn write_transaction<W: Write>(transaction: &Transaction, mut output: W) -> Result<(), Error> {
     let content =
         serde_json::to_string_pretty(transaction).map_err(|error| Error::FailedToEncodeToJson {
             context: "writing transaction",
@@ -727,8 +729,8 @@ fn read_deploy<R: Read>(input: R) -> Result<Deploy, Error> {
 }
 
 #[cfg(any(feature = "std-fs-io", test))]
-fn read_transaction<R: Read>(input: R) -> Result<TransactionV1, Error> {
-    let transaction: TransactionV1 =
+fn read_transaction<R: Read>(input: R) -> Result<Transaction, Error> {
+    let transaction: Transaction =
         serde_json::from_reader(input).map_err(|error| Error::FailedToDecodeFromJson {
             context: "reading transaction",
             error,

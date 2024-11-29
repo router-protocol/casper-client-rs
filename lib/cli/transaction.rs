@@ -5,21 +5,21 @@ use crate::rpcs::v2_0_0::speculative_exec_transaction::SpeculativeExecTxnResult;
 #[cfg(feature = "std-fs-io")]
 use crate::speculative_exec_txn;
 use crate::{
-    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams},
+    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams, TransactionV1Builder},
     put_transaction as put_transaction_rpc_handler,
     rpcs::results::PutTransactionResult,
     SuccessResponse,
 };
 use casper_types::{
     Digest, InitiatorAddr, SecretKey, Transaction, TransactionArgs, TransactionEntryPoint,
-    TransactionRuntime, TransactionV1, TransactionV1Builder,
+    TransactionRuntime,
 };
 
 pub fn create_transaction(
     builder_params: TransactionBuilderParams,
     transaction_params: TransactionStrParams,
     allow_unsigned_transaction: bool,
-) -> Result<TransactionV1, CliError> {
+) -> Result<Transaction, CliError> {
     let chain_name = transaction_params.chain_name.to_string();
 
     let maybe_secret_key = get_maybe_secret_key(
@@ -111,8 +111,7 @@ pub fn create_transaction(
     }
 
     let txn = transaction_builder.build().map_err(crate::Error::from)?;
-    // dbg!(&txn);
-    Ok(txn)
+    Ok(Transaction::V1(txn))
 }
 
 /// Creates a [`Transaction`] and outputs it to a file or stdout if the `std-fs-io` feature is enabled.
@@ -129,7 +128,7 @@ pub fn make_transaction(
     builder_params: TransactionBuilderParams,
     transaction_params: TransactionStrParams<'_>,
     #[allow(unused_variables)] force: bool,
-) -> Result<TransactionV1, CliError> {
+) -> Result<Transaction, CliError> {
     let transaction = create_transaction(builder_params, transaction_params.clone(), true)?;
     #[cfg(feature = "std-fs-io")]
     {
@@ -154,14 +153,9 @@ pub async fn put_transaction(
     let rpc_id = parse::rpc_id(rpc_id_str);
     let verbosity_level = parse::verbosity(verbosity_level);
     let transaction = create_transaction(builder_params, transaction_params, false)?;
-    put_transaction_rpc_handler(
-        rpc_id,
-        node_address,
-        verbosity_level,
-        Transaction::V1(transaction),
-    )
-    .await
-    .map_err(CliError::from)
+    put_transaction_rpc_handler(rpc_id, node_address, verbosity_level, transaction)
+        .await
+        .map_err(CliError::from)
 }
 ///
 /// Reads a previously-saved [`TransactionV1`] from a file and sends it to the network for execution.
@@ -179,14 +173,9 @@ pub async fn send_transaction_file(
     let rpc_id = parse::rpc_id(rpc_id_str);
     let verbosity_level = parse::verbosity(verbosity_level);
     let transaction = read_transaction_file(input_path)?;
-    put_transaction_rpc_handler(
-        rpc_id,
-        node_address,
-        verbosity_level,
-        Transaction::V1(transaction),
-    )
-    .await
-    .map_err(CliError::from)
+    put_transaction_rpc_handler(rpc_id, node_address, verbosity_level, transaction)
+        .await
+        .map_err(CliError::from)
 }
 
 ///
@@ -205,14 +194,9 @@ pub async fn speculative_send_transaction_file(
     let rpc_id = parse::rpc_id(rpc_id_str);
     let verbosity_level = parse::verbosity(verbosity_level);
     let transaction = read_transaction_file(input_path).unwrap();
-    speculative_exec_txn(
-        rpc_id,
-        node_address,
-        verbosity_level,
-        Transaction::V1(transaction),
-    )
-    .await
-    .map_err(CliError::from)
+    speculative_exec_txn(rpc_id, node_address, verbosity_level, transaction)
+        .await
+        .map_err(CliError::from)
 }
 
 /// Reads a previously-saved [`TransactionV1`] from a file, cryptographically signs it, and outputs it to a
