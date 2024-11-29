@@ -228,14 +228,15 @@ pub fn make_transaction_builder(
             amount,
             minimum_delegation_amount,
             maximum_delegation_amount,
+            reserved_slots,
         } => {
             let transaction_builder = TransactionV1Builder::new_add_bid(
                 public_key,
                 delegation_rate,
                 amount,
-                Some(minimum_delegation_amount),
-                Some(maximum_delegation_amount),
-                None, //TODO - fix this, CLI should handle this parameter
+                minimum_delegation_amount,
+                maximum_delegation_amount,
+                reserved_slots,
             )?;
             Ok(transaction_builder)
         }
@@ -359,6 +360,30 @@ pub fn make_transaction_builder(
         }
         TransactionBuilderParams::WithdrawBid { public_key, amount } => {
             let transaction_builder = TransactionV1Builder::new_withdraw_bid(public_key, amount)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::ActivateBid { validator } => {
+            let transaction_builder = TransactionV1Builder::new_activate_bid(validator)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::ChangeBidPublicKey {
+            public_key,
+            new_public_key,
+        } => {
+            let transaction_builder =
+                TransactionV1Builder::new_change_bid_public_key(public_key, new_public_key)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::AddReservations { reservations } => {
+            let transaction_builder = TransactionV1Builder::new_add_reservations(reservations)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::CancelReservations {
+            validator,
+            delegators,
+        } => {
+            let transaction_builder =
+                TransactionV1Builder::new_cancel_reservations(validator, delegators)?;
             Ok(transaction_builder)
         }
     }

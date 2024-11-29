@@ -447,10 +447,12 @@ mod transaction {
     use super::*;
     use crate::{cli::TransactionV1BuilderError, Error::TransactionBuild};
     use casper_types::{
-        bytesrepr::Bytes, PackageAddr, TransactionArgs, TransactionEntryPoint,
-        TransactionInvocationTarget, TransactionRuntime, TransactionTarget, TransferTarget,
+        bytesrepr::Bytes, system::auction::Reservation, PackageAddr, TransactionArgs,
+        TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntime, TransactionTarget,
+        TransferTarget,
     };
     use once_cell::sync::Lazy;
+    use rand::{thread_rng, Rng};
     use serde_json::json;
     static SAMPLE_TRANSACTION: Lazy<serde_json::Value> = Lazy::new(|| {
         json!({"Version1": {
@@ -555,8 +557,9 @@ mod transaction {
             public_key,
             delegation_rate: 0,
             amount,
-            minimum_delegation_amount,
-            maximum_delegation_amount,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: None,
         };
 
         let transaction =
@@ -593,6 +596,7 @@ mod transaction {
             amount_cl
         );
     }
+
     #[test]
     fn should_create_delegate_transaction() {
         let delegator_secret_key = SecretKey::generate_ed25519().unwrap();
@@ -667,6 +671,55 @@ mod transaction {
                 .get("validator")
                 .unwrap(),
             validator_public_key_cl
+        );
+    }
+
+    #[test]
+    fn should_create_activate_bid_transaction() {
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+
+        let validator = PublicKey::from(&secret_key);
+
+        let validator_cl = &CLValue::from_t(&validator).unwrap();
+
+        let transaction_str_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "activate-bid",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "0",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+        let transaction_string_params = transaction_str_params;
+
+        let transaction_builder_params = TransactionBuilderParams::ActivateBid { validator };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "activate-bid");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("validator")
+                .unwrap(),
+            validator_cl
         );
     }
 
@@ -895,6 +948,206 @@ mod transaction {
                 .get("new_validator")
                 .unwrap(),
             new_validator_public_key_cl
+        );
+    }
+
+    #[test]
+    fn should_create_change_bid_public_key_transaction() {
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+        let public_key = PublicKey::from(&secret_key);
+
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+        let new_public_key = PublicKey::from(&secret_key);
+
+        let public_key_cl = &CLValue::from_t(&public_key).unwrap();
+        let new_public_key_cl = &CLValue::from_t(&new_public_key).unwrap();
+
+        let transaction_string_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "change-bid-public-key-test",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+
+        let transaction_builder_params = TransactionBuilderParams::ChangeBidPublicKey {
+            public_key,
+            new_public_key,
+        };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "change-bid-public-key-test");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("public_key")
+                .unwrap(),
+            public_key_cl
+        );
+        assert!(transaction_v1
+            .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+            .unwrap()
+            .into_named()
+            .unwrap()
+            .get("new_public_key")
+            .is_some());
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("new_public_key")
+                .unwrap(),
+            new_public_key_cl
+        );
+    }
+
+    #[test]
+    fn should_create_add_reservations_transaction() {
+        let mut rng = thread_rng();
+
+        let reservations = (0..rng.gen_range(1..10))
+            .map(|_| {
+                let secret_key = SecretKey::generate_ed25519().unwrap();
+                let validator_public_key = PublicKey::from(&secret_key);
+
+                let delegator_kind = rng.gen();
+
+                let delegation_rate = rng.gen_range(0..50);
+                Reservation::new(validator_public_key, delegator_kind, delegation_rate)
+            })
+            .collect();
+
+        let reservations_cl = &CLValue::from_t(&reservations).unwrap();
+
+        let transaction_string_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "add-reservations-test",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+
+        let transaction_builder_params = TransactionBuilderParams::AddReservations { reservations };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "add-reservations-test");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("reservations")
+                .unwrap(),
+            reservations_cl
+        );
+    }
+
+    #[test]
+    fn should_create_cancel_reservations_transaction() {
+        let mut rng = thread_rng();
+
+        let validator_secret_key = SecretKey::generate_ed25519().unwrap();
+        let validator = PublicKey::from(&validator_secret_key);
+
+        let validator_cl = &CLValue::from_t(&validator).unwrap();
+
+        let delegators = (0..rng.gen_range(1..10))
+            .map(|_| {
+                let secret_key = SecretKey::generate_ed25519().unwrap();
+                PublicKey::from(&secret_key)
+            })
+            .collect();
+
+        let delegators_cl = &CLValue::from_t(&delegators).unwrap();
+
+        let transaction_string_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "cancel-reservations-test",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+
+        let transaction_builder_params = TransactionBuilderParams::CancelReservations {
+            validator,
+            delegators,
+        };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "cancel-reservations-test");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("validator")
+                .unwrap(),
+            validator_cl
+        );
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("delegators")
+                .unwrap(),
+            delegators_cl
         );
     }
 
@@ -1337,8 +1590,9 @@ mod transaction {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
             delegation_rate: 0,
             amount: U512::from(10),
-            minimum_delegation_amount,
-            maximum_delegation_amount,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: None,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1374,8 +1628,9 @@ mod transaction {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
             delegation_rate: 0,
             amount: U512::from(10),
-            minimum_delegation_amount,
-            maximum_delegation_amount,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: Some(0),
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, false);

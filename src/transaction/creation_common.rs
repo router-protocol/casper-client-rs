@@ -35,6 +35,9 @@ pub(super) enum DisplayOrder {
     ChainName,
     MaximumDelegationRate,
     MinimumDelegationRate,
+    ReservedSlots,
+    Reservations,
+    Delegators,
     Source,
     SessionArgSimple,
     SessionArgsJson,
@@ -42,6 +45,7 @@ pub(super) enum DisplayOrder {
     SessionEntryPoint,
     SessionVersion,
     PublicKey,
+    NewPublicKey,
     PackageAlias,
     PackageAddr,
     EntityAlias,
@@ -931,6 +935,46 @@ pub(super) mod public_key {
     }
 }
 
+pub(super) mod new_public_key {
+    use super::*;
+    use casper_client::cli::CliError;
+    use casper_types::{crypto, AsymmetricType, PublicKey};
+
+    pub const ARG_NAME: &str = "new-public-key";
+    const ARG_VALUE_NAME: &str = "FORMATTED STRING or PATH";
+    const ARG_HELP: &str =
+        "The hex-encoded public key of the account that the validator bid will be transferred to. \
+        This must be a properly formatted public key. The public key may instead be read \
+        in from a file, in which case enter the path to the file as the --new-public-key \
+        argument.";
+
+    pub fn arg(order: usize) -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(true)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(order)
+    }
+
+    pub fn get(matches: &ArgMatches) -> Result<String, CliError> {
+        let value = matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default();
+        common::public_key::try_read_from_file(value)
+    }
+
+    pub(super) fn parse_public_key(value: &str) -> Result<PublicKey, CliError> {
+        let public_key =
+            PublicKey::from_hex(value).map_err(|error| casper_client::Error::CryptoError {
+                context: "new public key",
+                error: crypto::ErrorExt::from(error),
+            })?;
+        Ok(public_key)
+    }
+}
+
 pub(super) mod entity_addr {
     use super::*;
     use casper_client::cli::CliError;
@@ -1029,7 +1073,7 @@ pub(super) mod session_entry_point {
             .long(ARG_NAME)
             .value_name(ARG_VALUE_NAME)
             .help(ARG_HELP)
-            .required(true)
+            .required(false)
             .display_order(DisplayOrder::SessionEntryPoint as usize)
     }
 
@@ -1159,7 +1203,7 @@ mod minimum_delegation_amount {
             .value_name(ARG_VALUE_NAME)
             .alias(ALIAS)
             .help(ARG_HELP)
-            .required(true)
+            .required(false)
             .display_order(DisplayOrder::MinimumDelegationRate as usize)
     }
 
@@ -1170,13 +1214,20 @@ mod minimum_delegation_amount {
             .unwrap_or_default()
     }
 
-    pub(super) fn parse_delegation_amount(value: &str) -> Result<u64, CliError> {
-        value
-            .parse::<u64>()
-            .map_err(|err| CliError::FailedToParseInt {
-                context: "Add Bid: Minimum delegation amount",
-                error: err,
-            })
+    pub(super) fn parse_delegation_amount(value: &str) -> Result<Option<u64>, CliError> {
+        let delegation_amount = if value.is_empty() {
+            None
+        } else {
+            Some(
+                value
+                    .parse::<u64>()
+                    .map_err(|err| CliError::FailedToParseInt {
+                        context: "Add Bid: Minimum delegation amount",
+                        error: err,
+                    })?,
+            )
+        };
+        Ok(delegation_amount)
     }
 }
 
@@ -1194,7 +1245,7 @@ mod maximum_delegation_amount {
             .value_name(ARG_VALUE_NAME)
             .alias(ALIAS)
             .help(ARG_HELP)
-            .required(true)
+            .required(false)
             .display_order(DisplayOrder::MaximumDelegationRate as usize)
     }
 
@@ -1205,13 +1256,60 @@ mod maximum_delegation_amount {
             .unwrap_or_default()
     }
 
-    pub(super) fn parse_delegation_amount(value: &str) -> Result<u64, CliError> {
-        value
-            .parse::<u64>()
-            .map_err(|err| CliError::FailedToParseInt {
-                context: "Add Bid: Maximum delegation amount",
-                error: err,
-            })
+    pub(super) fn parse_delegation_amount(value: &str) -> Result<Option<u64>, CliError> {
+        let delegation_amount = if value.is_empty() {
+            None
+        } else {
+            Some(
+                value
+                    .parse::<u64>()
+                    .map_err(|err| CliError::FailedToParseInt {
+                        context: "Add Bid: Maximum delegation amount",
+                        error: err,
+                    })?,
+            )
+        };
+        Ok(delegation_amount)
+    }
+}
+
+mod reserved_slots {
+    use super::*;
+    use casper_client::cli::CliError;
+    pub const ARG_NAME: &str = "reserved-slots";
+    const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
+    const ARG_HELP: &str = "number of reserved delegator slots for the add-bid transaction";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .required(false)
+            .display_order(DisplayOrder::ReservedSlots as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default()
+    }
+
+    pub(super) fn parse_reserved_slots(value: &str) -> Result<Option<u32>, CliError> {
+        let delegation_amount = if value.is_empty() {
+            None
+        } else {
+            Some(
+                value
+                    .parse::<u32>()
+                    .map_err(|err| CliError::FailedToParseInt {
+                        context: "Add Bid: Reserved slots",
+                        error: err,
+                    })?,
+            )
+        };
+        Ok(delegation_amount)
     }
 }
 
@@ -1219,8 +1317,7 @@ mod validator {
     use super::*;
     pub const ARG_NAME: &str = "validator";
     const ARG_VALUE_NAME: &str = common::ARG_STRING;
-    const ARG_HELP: &str =
-        "the validator's public key (as a formatted string) for the delegate transaction";
+    const ARG_HELP: &str = "the validator's public key (as a formatted string)";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -1325,6 +1422,88 @@ mod transaction_amount {
     }
 }
 
+mod reservations {
+    use super::*;
+    use casper_client::cli::CliError;
+    use casper_types::system::auction::Reservation;
+
+    pub const ARG_NAME: &str = "reservations";
+    const ARG_VALUE_NAME: &str = "JSON serialized Vec<Reservation>";
+    const ARG_HELP: &str = "list of reservations to add for the add-reservations transaction";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .required(true)
+            .display_order(DisplayOrder::Reservations as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default()
+    }
+
+    pub(super) fn parse_reservations(value: &str) -> Result<Vec<Reservation>, CliError> {
+        if !value.is_empty() {
+            serde_json::from_str(value).map_err(|_| {
+                CliError::InvalidCLValue(
+                    "Failed to parse reservations for add-reservations".to_string(),
+                )
+            })
+        } else {
+            Err(CliError::InvalidArgument {
+                context: "parse_reservations",
+                error: "Reservations cannot be empty".to_string(),
+            })
+        }
+    }
+}
+
+mod delegators {
+    use super::*;
+    use casper_client::cli::CliError;
+    use casper_types::PublicKey;
+
+    pub const ARG_NAME: &str = "delegators";
+    const ARG_VALUE_NAME: &str = "JSON serialized Vec<PublicKey>";
+    const ARG_HELP: &str = "list of delegator public keys for the cancel-reservations transaction";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .required(true)
+            .display_order(DisplayOrder::Delegators as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default()
+    }
+
+    pub(super) fn parse_delegators(value: &str) -> Result<Vec<PublicKey>, CliError> {
+        if !value.is_empty() {
+            serde_json::from_str(value).map_err(|_| {
+                CliError::InvalidCLValue(
+                    "Failed to parse delegators for cancel-reservations".to_string(),
+                )
+            })
+        } else {
+            Err(CliError::InvalidArgument {
+                context: "parse_delegators",
+                error: "Delegators cannot be empty".to_string(),
+            })
+        }
+    }
+}
+
 pub(super) mod add_bid {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams, TransactionStrParams};
@@ -1367,12 +1546,16 @@ pub(super) mod add_bid {
         let maximum_delegation_amount =
             maximum_delegation_amount::parse_delegation_amount(maximum_amount_string)?;
 
+        let reserved_slots_str = reserved_slots::get(matches);
+        let reserved_slots = reserved_slots::parse_reserved_slots(reserved_slots_str)?;
+
         let params = TransactionBuilderParams::AddBid {
             public_key,
             delegation_rate,
             amount,
             minimum_delegation_amount,
             maximum_delegation_amount,
+            reserved_slots,
         };
 
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
@@ -1387,8 +1570,50 @@ pub(super) mod add_bid {
             .arg(transaction_amount::arg())
             .arg(minimum_delegation_amount::arg())
             .arg(maximum_delegation_amount::arg())
+            .arg(reserved_slots::arg())
     }
 }
+
+pub(super) mod activate_bid {
+    use super::*;
+    use casper_client::cli::{CliError, TransactionBuilderParams, TransactionStrParams};
+
+    pub const NAME: &str = "activate-bid";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str = "Creates a new activate-bid transaction";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let validator_str = validator::get(matches);
+        let validator = public_key::parse_public_key(validator_str)?;
+
+        let params = TransactionBuilderParams::ActivateBid { validator };
+
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(activate_bid_subcommand: Command) -> Command {
+        activate_bid_subcommand.arg(validator::arg())
+    }
+}
+
 pub(super) mod withdraw_bid {
     use super::*;
     use crate::cli::TransactionBuilderParams;
@@ -1427,12 +1652,13 @@ pub(super) mod withdraw_bid {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(withdraw_bid_subcommand: Command) -> Command {
+        withdraw_bid_subcommand
             .arg(public_key::arg(DisplayOrder::PublicKey as usize))
             .arg(transaction_amount::arg())
     }
 }
+
 pub(super) mod delegate {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1478,8 +1704,8 @@ pub(super) mod delegate {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(delegate_subcommand: Command) -> Command {
+        delegate_subcommand
             .arg(delegator::arg())
             .arg(validator::arg())
             .arg(transaction_amount::arg())
@@ -1494,7 +1720,7 @@ pub(super) mod undelegate {
 
     const ACCEPT_SESSION_ARGS: bool = false;
 
-    const ABOUT: &str = "Creates a new delegate transaction";
+    const ABOUT: &str = "Creates a new undelegate transaction";
 
     pub fn build() -> Command {
         apply_common_creation_options(
@@ -1530,13 +1756,14 @@ pub(super) mod undelegate {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(undelegate_subcommand: Command) -> Command {
+        undelegate_subcommand
             .arg(delegator::arg())
             .arg(validator::arg())
             .arg(transaction_amount::arg())
     }
 }
+
 pub(super) mod redelegate {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1544,7 +1771,7 @@ pub(super) mod redelegate {
     pub const NAME: &str = "redelegate";
 
     const ACCEPT_SESSION_ARGS: bool = false;
-    const ABOUT: &str = "Creates a new delegate transaction";
+    const ABOUT: &str = "Creates a new redelegate transaction";
 
     pub fn build() -> Command {
         apply_common_creation_options(
@@ -1584,12 +1811,148 @@ pub(super) mod redelegate {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(redelegate_subcommand: Command) -> Command {
+        redelegate_subcommand
             .arg(delegator::arg())
             .arg(validator::arg())
             .arg(new_validator::arg())
             .arg(transaction_amount::arg())
+    }
+}
+
+pub(super) mod change_bid_public_key {
+    use super::*;
+    use casper_client::cli::{CliError, TransactionBuilderParams, TransactionStrParams};
+
+    pub const NAME: &str = "change-bid-public-key";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str = "Creates a new change-bid-public-key transaction";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let public_key_str = public_key::get(matches)?;
+        let public_key = public_key::parse_public_key(&public_key_str)?;
+
+        let new_public_key_str = new_public_key::get(matches)?;
+        let new_public_key = new_public_key::parse_public_key(&new_public_key_str)?;
+
+        let params = TransactionBuilderParams::ChangeBidPublicKey {
+            public_key,
+            new_public_key,
+        };
+
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(change_bid_public_key_subcommand: Command) -> Command {
+        change_bid_public_key_subcommand
+            .arg(public_key::arg(DisplayOrder::PublicKey as usize))
+            .arg(new_public_key::arg(DisplayOrder::NewPublicKey as usize))
+    }
+}
+
+pub(super) mod add_reservations {
+    use super::*;
+    use casper_client::cli::{CliError, TransactionBuilderParams, TransactionStrParams};
+
+    pub const NAME: &str = "add-reservations";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str = "Creates a new add-reservations transaction";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let reservations_str = reservations::get(matches);
+        let reservations = reservations::parse_reservations(reservations_str)?;
+
+        let params = TransactionBuilderParams::AddReservations { reservations };
+
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(add_reservations_subcommand: Command) -> Command {
+        add_reservations_subcommand.arg(reservations::arg())
+    }
+}
+
+pub(super) mod cancel_reservations {
+    use super::*;
+    use casper_client::cli::{CliError, TransactionBuilderParams, TransactionStrParams};
+
+    pub const NAME: &str = "cancel-reservations";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str = "Creates a new cancel-reservations transaction";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let validator_str = validator::get(matches);
+        let validator = public_key::parse_public_key(validator_str)?;
+
+        let delegators_str = delegators::get(matches);
+        let delegators = delegators::parse_delegators(delegators_str)?;
+
+        let params = TransactionBuilderParams::CancelReservations {
+            validator,
+            delegators,
+        };
+
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(cancel_reservations_subcommand: Command) -> Command {
+        cancel_reservations_subcommand
+            .arg(validator::arg())
+            .arg(delegators::arg())
     }
 }
 
@@ -1640,8 +2003,8 @@ pub(super) mod invocable_entity {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(invocable_entity_subcommand: Command) -> Command {
+        invocable_entity_subcommand
             .arg(entity_addr::arg())
             .arg(session_entry_point::arg())
             .arg(transaction_runtime::arg())
@@ -1649,6 +2012,7 @@ pub(super) mod invocable_entity {
             .arg(chunked_args::arg())
     }
 }
+
 pub(super) mod invocable_entity_alias {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1696,12 +2060,13 @@ pub(super) mod invocable_entity_alias {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(invocable_entity_alias_subcommand: Command) -> Command {
+        invocable_entity_alias_subcommand
             .arg(entity_alias_arg::arg())
             .arg(session_entry_point::arg())
     }
 }
+
 pub(super) mod package {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1753,13 +2118,14 @@ pub(super) mod package {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(package_subcommand: Command) -> Command {
+        package_subcommand
             .arg(package_addr::arg())
             .arg(session_version::arg())
             .arg(session_entry_point::arg())
     }
 }
+
 pub(super) mod package_alias {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
@@ -1812,13 +2178,14 @@ pub(super) mod package_alias {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(package_alias_subcommand: Command) -> Command {
+        package_alias_subcommand
             .arg(package_name_arg::arg())
             .arg(session_version::arg())
             .arg(session_entry_point::arg())
     }
 }
+
 pub(super) mod session {
     use super::*;
     use crate::cli::parse;
@@ -1882,8 +2249,8 @@ pub(super) mod session {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(session_subcommand: Command) -> Command {
+        session_subcommand
             .arg(transaction_path::arg())
             .arg(session_entry_point::arg())
             .arg(is_install_upgrade::arg(
@@ -1948,8 +2315,8 @@ pub(super) mod transfer {
         Ok((params, transaction_str_params))
     }
 
-    fn add_args(add_bid_subcommand: Command) -> Command {
-        add_bid_subcommand
+    fn add_args(transfer_subcommand: Command) -> Command {
+        transfer_subcommand
             .arg(source::arg())
             .arg(target::arg())
             .arg(transfer_amount::arg())
@@ -2076,12 +2443,12 @@ pub(super) fn build_transaction_str_params(
 
     let maybe_output_path = output::get(matches).unwrap_or_default();
     let initiator_addr = initiator_address::get(matches);
-    let session_entry_point = session_entry_point::get(matches);
-    let chunked_args = chunked_args::get(matches);
 
     if obtain_session_args {
         let session_args_simple = arg_simple::session::get(matches);
         let session_args_json = args_json::session::get(matches);
+        let session_entry_point = session_entry_point::get(matches);
+        let chunked_args = chunked_args::get(matches);
         TransactionStrParams {
             secret_key,
             timestamp,
