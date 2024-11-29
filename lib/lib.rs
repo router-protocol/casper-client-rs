@@ -49,6 +49,8 @@ mod verbosity;
 mod verification;
 mod verification_types;
 
+extern crate alloc;
+
 #[cfg(any(feature = "std-fs-io", test))]
 use std::{
     env::current_dir,

@@ -5,14 +5,14 @@ use crate::rpcs::v2_0_0::speculative_exec_transaction::SpeculativeExecTxnResult;
 #[cfg(feature = "std-fs-io")]
 use crate::speculative_exec_txn;
 use crate::{
-    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams},
+    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams, TransactionV1Builder},
     put_transaction as put_transaction_rpc_handler,
     rpcs::results::PutTransactionResult,
     SuccessResponse,
 };
 use casper_types::{
     Digest, InitiatorAddr, SecretKey, Transaction, TransactionArgs, TransactionEntryPoint,
-    TransactionRuntime, TransactionV1Builder,
+    TransactionRuntime,
 };
 
 pub fn create_transaction(
