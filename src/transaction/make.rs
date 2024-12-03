@@ -56,7 +56,7 @@ impl ClientCommand for MakeTransaction {
                 undelegate::NAME => undelegate::run(matches)?,
                 redelegate::NAME => redelegate::run(matches)?,
                 change_bid_public_key::NAME => change_bid_public_key::run(matches)?,
-                add_reservations::NAME => cancel_reservations::run(matches)?,
+                add_reservations::NAME => add_reservations::run(matches)?,
                 cancel_reservations::NAME => cancel_reservations::run(matches)?,
                 invocable_entity::NAME => invocable_entity::run(matches)?,
                 invocable_entity_alias::NAME => invocable_entity_alias::run(matches)?,

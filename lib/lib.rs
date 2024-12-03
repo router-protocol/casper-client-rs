@@ -279,7 +279,7 @@ pub fn sign_deploy_file<P: AsRef<Path>>(
     output.commit()
 }
 
-/// Reads a previously-saved [`TransactionV1`] from a file, cryptographically signs it, and outputs it to a file or stdout.
+/// Reads a previously-saved [`Transaction`] from a file, cryptographically signs it, and outputs it to a file or stdout.
 ///
 /// `output` specifies the output file and corresponding overwrite behaviour, or if OutputKind::Stdout,
 /// causes the `Transaction` to be printed `stdout`.
