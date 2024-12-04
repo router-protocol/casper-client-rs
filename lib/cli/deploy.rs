@@ -1,3 +1,5 @@
+//! Functions facilitating sending of [`Deploy`]s to the network
+
 use casper_types::{
     account::AccountHash, AsymmetricType, Deploy, PublicKey, TransferTarget, UIntParseError, URef,
     U512,
