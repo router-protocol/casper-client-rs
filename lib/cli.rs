@@ -21,6 +21,7 @@
 //!   [`Block`] height or empty.  If empty, the latest `Block` known on the server will be used.
 
 /// Functions for creating Deploys.
+mod arg_handling;
 pub mod deploy;
 mod deploy_builder;
 mod deploy_str_params;
