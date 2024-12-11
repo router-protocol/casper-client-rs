@@ -1,6 +1,7 @@
 use casper_types::{
-    bytesrepr::Bytes, system::auction::Reservation, AddressableEntityHash, PackageHash, PublicKey,
-    TransactionRuntime, TransferTarget, URef, U512,
+    bytesrepr::Bytes,
+    system::auction::{DelegatorKind, Reservation},
+    AddressableEntityHash, PackageHash, PublicKey, TransactionRuntime, TransferTarget, URef, U512,
 };
 
 /// An enum representing the parameters needed to construct a transaction builder
@@ -69,7 +70,7 @@ pub enum TransactionBuilderParams<'a> {
         /// The validator for the cancel reservations transaction
         validator: PublicKey,
         /// List of delegatora for the cancel reservations transaction
-        delegators: Vec<PublicKey>,
+        delegators: Vec<DelegatorKind>,
     },
     /// Parameters for the invocable entity variant of the transaction builder
     InvocableEntity {

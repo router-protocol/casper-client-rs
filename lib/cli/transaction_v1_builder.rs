@@ -9,7 +9,7 @@ use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
 use casper_types::{
     bytesrepr::{Bytes, ToBytes},
-    system::auction::Reservation,
+    system::auction::{DelegatorKind, Reservation},
     AddressableEntityHash, CLValueError, Digest, EntityVersion, InitiatorAddr, PackageHash,
     PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, TransactionArgs,
     TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntime, TransactionScheduling,
@@ -302,7 +302,7 @@ impl<'a> TransactionV1Builder<'a> {
     /// transaction.
     pub fn new_cancel_reservations(
         validator: PublicKey,
-        delegators: Vec<PublicKey>,
+        delegators: Vec<DelegatorKind>,
     ) -> Result<Self, CLValueError> {
         let args = arg_handling::new_cancel_reservations_args(validator, delegators)?;
         let mut builder = TransactionV1Builder::new();

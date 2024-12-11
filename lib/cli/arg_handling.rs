@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use casper_types::system::auction::{Reservation, ARG_VALIDATOR};
+use casper_types::system::auction::{DelegatorKind, Reservation, ARG_VALIDATOR};
 use casper_types::TransferTarget;
 use casper_types::{bytesrepr::ToBytes, CLTyped, CLValueError, PublicKey, RuntimeArgs, URef, U512};
 
@@ -47,7 +47,7 @@ const ADD_RESERVATIONS_ARG_RESERVATIONS: RequiredArg<Vec<Reservation>> =
     RequiredArg::new("reservations");
 
 const CANCEL_RESERVATIONS_ARG_VALIDATOR: RequiredArg<PublicKey> = RequiredArg::new("validator");
-const CANCEL_RESERVATIONS_ARG_DELEGATORS: RequiredArg<Vec<PublicKey>> =
+const CANCEL_RESERVATIONS_ARG_DELEGATORS: RequiredArg<Vec<DelegatorKind>> =
     RequiredArg::new("delegators");
 
 struct RequiredArg<T> {
@@ -148,7 +148,7 @@ pub fn new_add_reservations_args(
 /// Creates a `RuntimeArgs` suitable for use in a cancel reservations transaction.
 pub fn new_cancel_reservations_args(
     validator: PublicKey,
-    delegators: Vec<PublicKey>,
+    delegators: Vec<DelegatorKind>,
 ) -> Result<RuntimeArgs, CLValueError> {
     let mut args = RuntimeArgs::new();
     CANCEL_RESERVATIONS_ARG_VALIDATOR.insert(&mut args, validator)?;
