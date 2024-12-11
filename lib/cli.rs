@@ -74,7 +74,7 @@ pub use deploy::{
     make_deploy, make_transfer, put_deploy, send_deploy_file, sign_deploy_file,
     speculative_put_deploy, speculative_send_deploy_file, speculative_transfer, transfer,
 };
-pub(crate) use deploy_builder::{DeployBuilder, DeployBuilderError};
+pub use deploy_builder::{DeployBuilder, DeployBuilderError};
 pub use deploy_str_params::DeployStrParams;
 pub use dictionary_item_str_params::DictionaryItemStrParams;
 pub use error::{CliError, FromDecStrErr};
