@@ -1,7 +1,8 @@
 use casper_types::{
     bytesrepr::Bytes,
     system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, PackageHash, PublicKey, TransactionRuntime, TransferTarget, URef, U512,
+    AddressableEntityHash, PackageHash, PublicKey, TransactionRuntimeParams, TransferTarget, URef,
+    U512,
 };
 
 /// An enum representing the parameters needed to construct a transaction builder
@@ -78,10 +79,8 @@ pub enum TransactionBuilderParams<'a> {
         entity_hash: AddressableEntityHash,
         /// The entry point for the invocable entity transaction
         entry_point: &'a str,
-        /// Transaction Runtime.
-        runtime: TransactionRuntime,
-        /// The amount to be transferred in the invocable entity transaction.
-        transferred_value: u64,
+        /// Transaction Runtime params.
+        runtime: TransactionRuntimeParams,
     },
     /// Parameters for the invocable entity alias variant of the transaction builder
     InvocableEntityAlias {
@@ -89,10 +88,8 @@ pub enum TransactionBuilderParams<'a> {
         entity_alias: &'a str,
         /// The entry_point for the invocable entity alias transaction
         entry_point: &'a str,
-        /// Transaction Runtime.
-        runtime: TransactionRuntime,
-        /// Transferred value.
-        transferred_value: u64,
+        /// Transaction Runtime params.
+        runtime: TransactionRuntimeParams,
     },
     /// Parameters for the package variant of the transaction builder
     Package {
@@ -103,9 +100,7 @@ pub enum TransactionBuilderParams<'a> {
         /// The entry_point for the package transaction
         entry_point: &'a str,
         /// Transaction Runtime.
-        runtime: TransactionRuntime,
-        /// Transferred value.
-        transferred_value: u64,
+        runtime: TransactionRuntimeParams,
     },
     /// Parameters for the package alias variant of the transaction builder
     PackageAlias {
@@ -115,10 +110,8 @@ pub enum TransactionBuilderParams<'a> {
         maybe_entity_version: Option<u32>,
         /// The entry point for the package alias transaction
         entry_point: &'a str,
-        /// Transaction Runtime.
-        runtime: TransactionRuntime,
-        /// Transferred value.
-        transferred_value: u64,
+        /// Transaction Runtime params.
+        runtime: TransactionRuntimeParams,
     },
     /// Parameters for the session variant of the transaction builder
     Session {
@@ -127,11 +120,7 @@ pub enum TransactionBuilderParams<'a> {
         /// The Bytes to be run by the execution engine for the session transaction
         transaction_bytes: Bytes,
         /// Transaction Runtime.
-        runtime: TransactionRuntime,
-        /// Transferred value.
-        transferred_value: u64,
-        /// The optional seed for the session transaction
-        seed: Option<[u8; 32]>,
+        runtime: TransactionRuntimeParams,
     },
     /// Parameters for the transfer variant of the transaction builder
     Transfer {

@@ -448,8 +448,8 @@ mod transaction {
     use crate::{cli::TransactionV1BuilderError, Error::TransactionBuild};
     use casper_types::{
         bytesrepr::Bytes, system::auction::Reservation, PackageAddr, TransactionArgs,
-        TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntime, TransactionTarget,
-        TransferTarget,
+        TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
+        TransactionTarget, TransferTarget,
     };
     use once_cell::sync::Lazy;
     use rand::{thread_rng, Rng};
@@ -1156,10 +1156,10 @@ mod transaction {
         let entity_addr: EntityAddr = EntityAddr::new_account([0u8; 32]);
         let entity_hash = entity_addr.value();
         let entry_point = String::from("test-entry-point");
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByHash(entity_hash),
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
 
         let entry_point_ref = &TransactionEntryPoint::Custom(entry_point);
@@ -1184,11 +1184,11 @@ mod transaction {
             chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_hash.into(),
             entry_point: "test-entry-point",
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1212,10 +1212,10 @@ mod transaction {
     #[test]
     fn should_create_invocable_entity_alias_transaction() {
         let alias = String::from("alias");
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByName(alias),
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1237,11 +1237,11 @@ mod transaction {
             chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias: "alias",
             entry_point: "entry-point-alias",
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1267,13 +1267,13 @@ mod transaction {
         let package_addr: PackageAddr = vec![0u8; 32].as_slice().try_into().unwrap();
         let entry_point = "test-entry-point-package";
         let maybe_entity_version = Some(23);
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByPackageHash {
                 addr: package_addr,
                 version: maybe_entity_version,
             },
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1294,13 +1294,12 @@ mod transaction {
             session_entry_point: None,
             chunked_args: None,
         };
-
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(),
             entry_point,
             maybe_entity_version,
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1326,13 +1325,13 @@ mod transaction {
         let package_name = String::from("package-name");
         let entry_point = "test-entry-point-package";
         let maybe_entity_version = Some(23);
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByPackageName {
                 name: package_name.clone(),
                 version: maybe_entity_version,
             },
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1354,12 +1353,12 @@ mod transaction {
             chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::PackageAlias {
             package_alias: &package_name,
             entry_point,
             maybe_entity_version,
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1383,12 +1382,11 @@ mod transaction {
     fn should_create_session_transaction() {
         let transaction_bytes = Bytes::from(vec![1u8; 32]);
         let is_install_upgrade = true;
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Session {
             is_install_upgrade,
-            runtime: TransactionRuntime::VmCasperV1,
+            runtime: params,
             module_bytes: transaction_bytes.clone(),
-            transferred_value: 0,
-            seed: None,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1410,12 +1408,11 @@ mod transaction {
             chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
-            runtime: TransactionRuntime::VmCasperV1,
-            transferred_value: 0,
-            seed: None,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1451,7 +1448,7 @@ mod transaction {
 
         let maybe_source = Some(source_uref);
 
-        let source_uref_cl = &CLValue::from_t(Some(&source_uref)).unwrap();
+        let source_uref_cl = &CLValue::from_t(&source_uref).unwrap();
         let target_uref_cl = &CLValue::from_t(target_uref).unwrap();
 
         let transaction_string_params = TransactionStrParams {

@@ -12,8 +12,9 @@ use casper_types::{
     system::auction::{DelegatorKind, Reservation},
     AddressableEntityHash, CLValueError, Digest, EntityVersion, InitiatorAddr, PackageHash,
     PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, TransactionArgs,
-    TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntime, TransactionScheduling,
-    TransactionTarget, TransactionV1, TransactionV1Payload, TransferTarget, URef, U512,
+    TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
+    TransactionScheduling, TransactionTarget, TransactionV1, TransactionV1Payload, TransferTarget,
+    URef, U512,
 };
 use core::marker::PhantomData;
 pub use error::TransactionV1BuilderError;
@@ -316,14 +317,9 @@ impl<'a> TransactionV1Builder<'a> {
     fn new_targeting_stored<E: Into<String>>(
         id: TransactionInvocationTarget,
         entry_point: E,
-        runtime: TransactionRuntime,
-        transferred_value: u64,
+        runtime: TransactionRuntimeParams,
     ) -> Self {
-        let target = TransactionTarget::Stored {
-            id,
-            runtime,
-            transferred_value,
-        };
+        let target = TransactionTarget::Stored { id, runtime };
         let mut builder = TransactionV1Builder::new();
         builder.args = TransactionArgs::Named(RuntimeArgs::new());
         builder.target = target;
@@ -337,11 +333,10 @@ impl<'a> TransactionV1Builder<'a> {
     pub fn new_targeting_invocable_entity<E: Into<String>>(
         hash: AddressableEntityHash,
         entry_point: E,
-        runtime: TransactionRuntime,
-        transferred_value: u64,
+        runtime: TransactionRuntimeParams,
     ) -> Self {
         let id = TransactionInvocationTarget::new_invocable_entity(hash);
-        Self::new_targeting_stored(id, entry_point, runtime, transferred_value)
+        Self::new_targeting_stored(id, entry_point, runtime)
     }
 
     /// Returns a new `TransactionV1Builder` suitable for building a transaction targeting a stored
@@ -349,11 +344,10 @@ impl<'a> TransactionV1Builder<'a> {
     pub fn new_targeting_invocable_entity_via_alias<A: Into<String>, E: Into<String>>(
         alias: A,
         entry_point: E,
-        runtime: TransactionRuntime,
-        transferred_value: u64,
+        runtime: TransactionRuntimeParams,
     ) -> Self {
         let id = TransactionInvocationTarget::new_invocable_entity_alias(alias.into());
-        Self::new_targeting_stored(id, entry_point, runtime, transferred_value)
+        Self::new_targeting_stored(id, entry_point, runtime)
     }
 
     /// Returns a new `TransactionV1Builder` suitable for building a transaction targeting a
@@ -362,11 +356,10 @@ impl<'a> TransactionV1Builder<'a> {
         hash: PackageHash,
         version: Option<EntityVersion>,
         entry_point: E,
-        runtime: TransactionRuntime,
-        transferred_value: u64,
+        runtime: TransactionRuntimeParams,
     ) -> Self {
         let id = TransactionInvocationTarget::new_package(hash, version);
-        Self::new_targeting_stored(id, entry_point, runtime, transferred_value)
+        Self::new_targeting_stored(id, entry_point, runtime)
     }
 
     /// Returns a new `TransactionV1Builder` suitable for building a transaction targeting a
@@ -375,11 +368,10 @@ impl<'a> TransactionV1Builder<'a> {
         alias: A,
         version: Option<EntityVersion>,
         entry_point: E,
-        runtime: TransactionRuntime,
-        transferred_value: u64,
+        runtime: TransactionRuntimeParams,
     ) -> Self {
         let id = TransactionInvocationTarget::new_package_alias(alias.into(), version);
-        Self::new_targeting_stored(id, entry_point, runtime, transferred_value)
+        Self::new_targeting_stored(id, entry_point, runtime)
     }
 
     /// Returns a new `TransactionV1Builder` suitable for building a transaction for running session
@@ -387,16 +379,12 @@ impl<'a> TransactionV1Builder<'a> {
     pub fn new_session(
         is_install_upgrade: bool,
         module_bytes: Bytes,
-        runtime: TransactionRuntime,
-        transferred_value: u64,
-        seed: Option<[u8; 32]>,
+        runtime: TransactionRuntimeParams,
     ) -> Self {
         let target = TransactionTarget::Session {
             is_install_upgrade,
             module_bytes,
             runtime,
-            transferred_value,
-            seed,
         };
         let mut builder = TransactionV1Builder::new();
         builder.args = TransactionArgs::Named(RuntimeArgs::new());

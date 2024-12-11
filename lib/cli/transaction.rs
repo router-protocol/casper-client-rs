@@ -12,7 +12,7 @@ use crate::{
 };
 use casper_types::{
     Digest, InitiatorAddr, SecretKey, Transaction, TransactionArgs, TransactionEntryPoint,
-    TransactionRuntime,
+    TransactionRuntimeParams,
 };
 
 pub fn create_transaction(
@@ -32,7 +32,7 @@ pub fn create_transaction(
     let ttl = parse::ttl(transaction_params.ttl)?;
     let maybe_session_account = parse::session_account(&transaction_params.initiator_addr)?;
 
-    let is_v2_wasm = matches!(&builder_params, TransactionBuilderParams::Session { runtime, .. } if runtime == &TransactionRuntime::VmCasperV2);
+    let is_v2_wasm = matches!(&builder_params, TransactionBuilderParams::Session { runtime, .. } if matches!(runtime, &TransactionRuntimeParams::VmCasperV2 { .. }));
 
     let mut transaction_builder = make_transaction_builder(builder_params)?;
 
@@ -272,13 +272,11 @@ pub fn make_transaction_builder(
             entity_hash,
             entry_point,
             runtime,
-            transferred_value,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_invocable_entity(
                 entity_hash,
                 entry_point,
                 runtime,
-                transferred_value,
             );
             Ok(transaction_builder)
         }
@@ -286,14 +284,12 @@ pub fn make_transaction_builder(
             entity_alias,
             entry_point,
             runtime,
-            transferred_value,
         } => {
             let transaction_builder =
                 TransactionV1Builder::new_targeting_invocable_entity_via_alias(
                     entity_alias,
                     entry_point,
                     runtime,
-                    transferred_value,
                 );
             Ok(transaction_builder)
         }
@@ -302,14 +298,12 @@ pub fn make_transaction_builder(
             maybe_entity_version,
             entry_point,
             runtime,
-            transferred_value,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_package(
                 package_hash,
                 maybe_entity_version,
                 entry_point,
                 runtime,
-                transferred_value,
             );
             Ok(transaction_builder)
         }
@@ -318,7 +312,6 @@ pub fn make_transaction_builder(
             maybe_entity_version,
             entry_point,
             runtime,
-            transferred_value,
         } => {
             let new_targeting_package_via_alias =
                 TransactionV1Builder::new_targeting_package_via_alias(
@@ -326,7 +319,6 @@ pub fn make_transaction_builder(
                     maybe_entity_version,
                     entry_point,
                     runtime,
-                    transferred_value,
                 );
             let transaction_builder = new_targeting_package_via_alias;
             Ok(transaction_builder)
@@ -335,16 +327,9 @@ pub fn make_transaction_builder(
             is_install_upgrade,
             transaction_bytes,
             runtime,
-            transferred_value,
-            seed,
         } => {
-            let transaction_builder = TransactionV1Builder::new_session(
-                is_install_upgrade,
-                transaction_bytes,
-                runtime,
-                transferred_value,
-                seed,
-            );
+            let transaction_builder =
+                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes, runtime);
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Transfer {
