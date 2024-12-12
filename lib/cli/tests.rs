@@ -447,9 +447,10 @@ mod transaction {
     use super::*;
     use crate::{cli::TransactionV1BuilderError, Error::TransactionBuild};
     use casper_types::{
-        bytesrepr::Bytes, system::auction::Reservation, PackageAddr, TransactionArgs,
-        TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
-        TransactionTarget, TransferTarget,
+        bytesrepr::Bytes,
+        system::auction::{DelegatorKind, Reservation},
+        PackageAddr, TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget,
+        TransactionRuntimeParams, TransactionTarget, TransferTarget,
     };
     use once_cell::sync::Lazy;
     use rand::{thread_rng, Rng};
@@ -1092,7 +1093,7 @@ mod transaction {
         let delegators = (0..rng.gen_range(1..10))
             .map(|_| {
                 let secret_key = SecretKey::generate_ed25519().unwrap();
-                PublicKey::from(&secret_key)
+                DelegatorKind::PublicKey(PublicKey::from(&secret_key))
             })
             .collect();
 
@@ -1448,7 +1449,7 @@ mod transaction {
 
         let maybe_source = Some(source_uref);
 
-        let source_uref_cl = &CLValue::from_t(&source_uref).unwrap();
+        let source_uref_cl = &CLValue::from_t(source_uref).unwrap();
         let target_uref_cl = &CLValue::from_t(target_uref).unwrap();
 
         let transaction_string_params = TransactionStrParams {

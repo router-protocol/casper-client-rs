@@ -1467,10 +1467,10 @@ mod reservations {
 mod delegators {
     use super::*;
     use casper_client::cli::CliError;
-    use casper_types::PublicKey;
+    use casper_types::system::auction::DelegatorKind;
 
     pub const ARG_NAME: &str = "delegators";
-    const ARG_VALUE_NAME: &str = "JSON serialized Vec<PublicKey>";
+    const ARG_VALUE_NAME: &str = "JSON serialized Vec<DelegatorKind>";
     const ARG_HELP: &str = "list of delegator public keys for the cancel-reservations transaction";
 
     pub fn arg() -> Arg {
@@ -1489,7 +1489,7 @@ mod delegators {
             .unwrap_or_default()
     }
 
-    pub(super) fn parse_delegators(value: &str) -> Result<Vec<PublicKey>, CliError> {
+    pub(super) fn parse_delegators(value: &str) -> Result<Vec<DelegatorKind>, CliError> {
         if !value.is_empty() {
             serde_json::from_str(value).map_err(|_| {
                 CliError::InvalidCLValue(
