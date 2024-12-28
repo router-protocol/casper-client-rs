@@ -21,10 +21,13 @@
 //!   [`Block`] height or empty.  If empty, the latest `Block` known on the server will be used.
 
 /// Functions for creating Deploys.
+mod arg_handling;
 pub mod deploy;
+mod deploy_builder;
 mod deploy_str_params;
 mod dictionary_item_str_params;
 mod error;
+mod fields_container;
 mod json_args;
 pub mod parse;
 mod payment_str_params;
@@ -35,6 +38,7 @@ mod tests;
 mod transaction;
 mod transaction_builder_params;
 mod transaction_str_params;
+mod transaction_v1_builder;
 
 #[cfg(feature = "std-fs-io")]
 use serde::Serialize;
@@ -58,6 +62,9 @@ use crate::{
     },
     SuccessResponse,
 };
+
+#[cfg(feature = "std-fs-io")]
+use crate::verification_types::VerificationDetails;
 #[cfg(doc)]
 use crate::{Account, Block, Error, StoredValue, Transfer};
 #[cfg(doc)]
@@ -67,9 +74,11 @@ pub use deploy::{
     make_deploy, make_transfer, put_deploy, send_deploy_file, sign_deploy_file,
     speculative_put_deploy, speculative_send_deploy_file, speculative_transfer, transfer,
 };
+pub use deploy_builder::{DeployBuilder, DeployBuilderError};
 pub use deploy_str_params::DeployStrParams;
 pub use dictionary_item_str_params::DictionaryItemStrParams;
 pub use error::{CliError, FromDecStrErr};
+pub(crate) use fields_container::{FieldsContainer, FieldsContainerError};
 pub use json_args::{
     help as json_args_help, Error as JsonArgsError, ErrorDetails as JsonArgsErrorDetails, JsonArg,
 };
@@ -83,6 +92,7 @@ pub use transaction::{
 };
 pub use transaction_builder_params::TransactionBuilderParams;
 pub use transaction_str_params::TransactionStrParams;
+pub(crate) use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
 
 /// Retrieves a [`casper_types::Deploy`] from the network.
 ///
@@ -613,4 +623,24 @@ pub async fn get_era_info(
     crate::get_era_info(rpc_id, node_address, verbosity, maybe_block_id)
         .await
         .map_err(CliError::from)
+}
+
+/// Verifies the smart contract code against the one installed
+/// by deploy or transaction with given hash.
+#[cfg(feature = "std-fs-io")]
+pub async fn verify_contract(
+    hash_str: &str,
+    verification_url_base_path: &str,
+    verification_project_path: Option<&str>,
+    verbosity_level: u64,
+) -> Result<VerificationDetails, CliError> {
+    let verbosity = parse::verbosity(verbosity_level);
+    crate::verify_contract(
+        hash_str,
+        verification_url_base_path,
+        verification_project_path,
+        verbosity,
+    )
+    .await
+    .map_err(CliError::from)
 }

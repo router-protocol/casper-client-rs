@@ -1,5 +1,6 @@
 use std::{num::ParseIntError, str::ParseBoolError};
 
+use base16::DecodeError;
 use humantime::{DurationError, TimestampError};
 use thiserror::Error;
 
@@ -187,6 +188,14 @@ pub enum CliError {
     /// Failed to parse a validator public key.
     #[error("Failed to parse a validator public key")]
     FailedToParseValidatorPublicKey,
+
+    /// Failed to parse base16 bytes.
+    #[error("Failed to parse base16 bytes: {0}")]
+    FailedToParseBase16(#[from] DecodeError),
+
+    /// Unexpected transaction args variant.
+    #[error("Unexpected transaction args variant")]
+    UnexpectedTransactionArgsVariant,
 }
 
 impl From<CLValueError> for CliError {

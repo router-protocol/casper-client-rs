@@ -338,7 +338,7 @@ fn should_fail_to_create_deploy_with_no_session_account() {
     assert!(matches!(
         deploy.unwrap_err(),
         CliError::Core(Error::DeployBuild(
-            casper_types::DeployBuilderError::DeployMissingSessionAccount
+            DeployBuilderError::DeployMissingSessionAccount
         ))
     ));
 }
@@ -384,7 +384,7 @@ fn should_fail_to_create_transfer_without_account() {
     assert!(matches!(
         transfer_deploy.unwrap_err(),
         CliError::Core(Error::DeployBuild(
-            casper_types::DeployBuilderError::DeployMissingSessionAccount
+            DeployBuilderError::DeployMissingSessionAccount
         ))
     ));
 }
@@ -445,44 +445,63 @@ fn should_fail_to_create_deploy_with_payment_and_session_with_no_secret_key_whil
 
 mod transaction {
     use super::*;
-    use crate::Error::TransactionBuild;
+    use crate::{cli::TransactionV1BuilderError, Error::TransactionBuild};
     use casper_types::{
-        bytesrepr::Bytes, PackageAddr, RuntimeArgs, TransactionEntryPoint,
-        TransactionInvocationTarget, TransactionRuntime, TransactionTarget,
-        TransactionV1BuilderError, TransferTarget,
+        bytesrepr::Bytes,
+        system::auction::{DelegatorKind, Reservation},
+        PackageAddr, TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget,
+        TransactionRuntimeParams, TransactionTarget, TransferTarget,
     };
-    const SAMPLE_TRANSACTION: &str = r#"{
-  "hash": "57144349509f7cb9374e0f38b4e4910526b397a38f0dc21eaae1df916df66aae",
-  "payload": {
-    "initiator_addr": {
-      "PublicKey": "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d"
-    },
-    "timestamp": "2024-10-07T16:45:27.994Z",
-    "ttl": "30m",
-    "chain_name": "test",
-    "pricing_mode": {
-      "Fixed": {
-        "additional_computation_factor": 0,
-        "gas_price_tolerance": 10
-      }
-    },
-    "fields": {
-      "0": "020000000600000074617267657421000000722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d010c06000000616d6f756e7402000000010a08",
-      "1": "010000000000000000000100000000",
-      "2": "010000000000000000000100000002",
-      "3": "010000000000000000000100000000"
-    }
-  },
-  "approvals": []
-}
-"#;
+    use once_cell::sync::Lazy;
+    use rand::{thread_rng, Rng};
+    use serde_json::json;
+    static SAMPLE_TRANSACTION: Lazy<serde_json::Value> = Lazy::new(|| {
+        json!({"Version1": {
+            "hash": "57144349509f7cb9374e0f38b4e4910526b397a38f0dc21eaae1df916df66aae",
+            "payload": {
+                "initiator_addr": {
+                    "PublicKey": "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d",
+                },
+                "timestamp": "2024-10-07T16:45:27.994Z",
+                "ttl": "30m",
+                "chain_name": "test",
+                "pricing_mode": {
+                "Fixed": {
+                    "additional_computation_factor": 0,
+                    "gas_price_tolerance": 10,
+                }
+                },
+                "fields": {
+                  "args": {
+                    "Named": [
+                      [
+                        "xyz",
+                        {
+                          "bytes": "0d0000001af81d860f238f832b8f8e648c",
+                          "cl_type": {
+                            "List": "U8"
+                          }
+                        }
+                      ]
+                    ]
+                  },
+                  "entry_point": "AddBid",
+                  "scheduling": {
+                    "FutureEra": 195120
+                  },
+                  "target": "Native"
+                }
+            },
+            "approvals": [],
+        }})
+    });
     const SAMPLE_DIGEST: &str =
         "01722e1b3d31bef0ba832121bd2941aae6a246d0d05ac95aa16dd587cc5469871d";
 
     #[test]
     fn should_sign_transaction() {
-        let bytes = SAMPLE_TRANSACTION.as_bytes();
-        let transaction = crate::read_transaction(bytes).unwrap();
+        let bytes = serde_json::to_string_pretty(&*SAMPLE_TRANSACTION).unwrap();
+        let transaction = crate::read_transaction(bytes.as_bytes()).unwrap();
         assert_eq!(
             transaction.approvals().len(),
             0,
@@ -530,49 +549,55 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key,
             delegation_rate: 0,
             amount,
-            minimum_delegation_amount,
-            maximum_delegation_amount,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: None,
         };
 
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "add-bid-test");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "add-bid-test");
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("public_key")
                 .unwrap(),
             public_key_cl
         );
-        assert!(transaction
-            .as_ref()
+        assert!(transaction_v1
+            .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
             .unwrap()
-            .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+            .into_named()
             .unwrap()
             .get("delegation_rate")
             .is_some());
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
             amount_cl
         );
     }
+
     #[test]
     fn should_create_delegate_transaction() {
         let delegator_secret_key = SecretKey::generate_ed25519().unwrap();
@@ -601,6 +626,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Delegate {
@@ -613,36 +641,86 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "delegate");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "delegate");
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("delegator")
                 .unwrap(),
             delegator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("validator")
                 .unwrap(),
             validator_public_key_cl
+        );
+    }
+
+    #[test]
+    fn should_create_activate_bid_transaction() {
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+
+        let validator = PublicKey::from(&secret_key);
+
+        let validator_cl = &CLValue::from_t(&validator).unwrap();
+
+        let transaction_str_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "activate-bid",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "0",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+        let transaction_string_params = transaction_str_params;
+
+        let transaction_builder_params = TransactionBuilderParams::ActivateBid { validator };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "activate-bid");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("validator")
+                .unwrap(),
+            validator_cl
         );
     }
 
@@ -656,7 +734,7 @@ mod transaction {
         let public_key_cl = &CLValue::from_t(&public_key).unwrap();
         let amount_cl = &CLValue::from_t(amount).unwrap();
 
-        let transaction_string_params = TransactionStrParams {
+        let transaction_str_params = TransactionStrParams {
             secret_key: "",
             timestamp: "",
             ttl: "30min",
@@ -671,7 +749,11 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
+        let transaction_string_params = transaction_str_params;
 
         let transaction_builder_params =
             TransactionBuilderParams::WithdrawBid { public_key, amount };
@@ -680,22 +762,23 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "withdraw-bid");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "withdraw-bid");
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("public_key")
                 .unwrap(),
@@ -731,6 +814,9 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Undelegate {
@@ -743,32 +829,33 @@ mod transaction {
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "undelegate");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "undelegate");
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("delegator")
                 .unwrap(),
             delegator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("validator")
                 .unwrap(),
@@ -807,6 +894,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Redelegate {
@@ -818,42 +908,43 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "redelegate");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "redelegate");
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("amount")
                 .unwrap(),
             amount_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("delegator")
                 .unwrap(),
             delegator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("validator")
                 .unwrap(),
             validator_public_key_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("new_validator")
                 .unwrap(),
@@ -862,13 +953,214 @@ mod transaction {
     }
 
     #[test]
+    fn should_create_change_bid_public_key_transaction() {
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+        let public_key = PublicKey::from(&secret_key);
+
+        let secret_key = SecretKey::generate_ed25519().unwrap();
+        let new_public_key = PublicKey::from(&secret_key);
+
+        let public_key_cl = &CLValue::from_t(&public_key).unwrap();
+        let new_public_key_cl = &CLValue::from_t(&new_public_key).unwrap();
+
+        let transaction_string_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "change-bid-public-key-test",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+
+        let transaction_builder_params = TransactionBuilderParams::ChangeBidPublicKey {
+            public_key,
+            new_public_key,
+        };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "change-bid-public-key-test");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("public_key")
+                .unwrap(),
+            public_key_cl
+        );
+        assert!(transaction_v1
+            .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+            .unwrap()
+            .into_named()
+            .unwrap()
+            .get("new_public_key")
+            .is_some());
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("new_public_key")
+                .unwrap(),
+            new_public_key_cl
+        );
+    }
+
+    #[test]
+    fn should_create_add_reservations_transaction() {
+        let mut rng = thread_rng();
+
+        let reservations = (0..rng.gen_range(1..10))
+            .map(|_| {
+                let secret_key = SecretKey::generate_ed25519().unwrap();
+                let validator_public_key = PublicKey::from(&secret_key);
+
+                let delegator_kind = rng.gen();
+
+                let delegation_rate = rng.gen_range(0..50);
+                Reservation::new(validator_public_key, delegator_kind, delegation_rate)
+            })
+            .collect();
+
+        let reservations_cl = &CLValue::from_t(&reservations).unwrap();
+
+        let transaction_string_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "add-reservations-test",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+
+        let transaction_builder_params = TransactionBuilderParams::AddReservations { reservations };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "add-reservations-test");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("reservations")
+                .unwrap(),
+            reservations_cl
+        );
+    }
+
+    #[test]
+    fn should_create_cancel_reservations_transaction() {
+        let mut rng = thread_rng();
+
+        let validator_secret_key = SecretKey::generate_ed25519().unwrap();
+        let validator = PublicKey::from(&validator_secret_key);
+
+        let validator_cl = &CLValue::from_t(&validator).unwrap();
+
+        let delegators = (0..rng.gen_range(1..10))
+            .map(|_| {
+                let secret_key = SecretKey::generate_ed25519().unwrap();
+                DelegatorKind::PublicKey(PublicKey::from(&secret_key))
+            })
+            .collect();
+
+        let delegators_cl = &CLValue::from_t(&delegators).unwrap();
+
+        let transaction_string_params = TransactionStrParams {
+            secret_key: "",
+            timestamp: "",
+            ttl: "30min",
+            chain_name: "cancel-reservations-test",
+            initiator_addr: SAMPLE_ACCOUNT.to_string(),
+            session_args_simple: vec![],
+            session_args_json: "",
+            pricing_mode: "fixed",
+            output_path: "",
+            payment_amount: "100",
+            gas_price_tolerance: "10",
+            additional_computation_factor: "",
+            receipt: SAMPLE_DIGEST,
+            standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
+        };
+
+        let transaction_builder_params = TransactionBuilderParams::CancelReservations {
+            validator,
+            delegators,
+        };
+
+        let transaction =
+            create_transaction(transaction_builder_params, transaction_string_params, true);
+
+        assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "cancel-reservations-test");
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("validator")
+                .unwrap(),
+            validator_cl
+        );
+        assert_eq!(
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
+                .unwrap()
+                .into_named()
+                .unwrap()
+                .get("delegators")
+                .unwrap(),
+            delegators_cl
+        );
+    }
+
+    #[test]
     fn should_create_invocable_entity_transaction() {
         let entity_addr: EntityAddr = EntityAddr::new_account([0u8; 32]);
         let entity_hash = entity_addr.value();
         let entry_point = String::from("test-entry-point");
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByHash(entity_hash),
-            runtime: TransactionRuntime::VmCasperV1,
+            runtime: params,
         };
 
         let entry_point_ref = &TransactionEntryPoint::Custom(entry_point);
@@ -888,32 +1180,31 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::InvocableEntity {
             entity_hash: entity_hash.into(),
             entry_point: "test-entry-point",
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
 
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "invocable-entity");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "invocable-entity"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             *entry_point_ref
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
@@ -922,9 +1213,10 @@ mod transaction {
     #[test]
     fn should_create_invocable_entity_alias_transaction() {
         let alias = String::from("alias");
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByName(alias),
-            runtime: TransactionRuntime::VmCasperV1,
+            runtime: params,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -941,47 +1233,48 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             additional_computation_factor: "",
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::InvocableEntityAlias {
             entity_alias: "alias",
             entry_point: "entry-point-alias",
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "invocable-entity-alias");
         assert_eq!(
-            transaction.as_ref().unwrap().chain_name(),
-            "invocable-entity-alias"
-        );
-        assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Custom("entry-point-alias".to_string())
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
         );
     }
+
     #[test]
     fn should_create_package_transaction() {
         let package_addr: PackageAddr = vec![0u8; 32].as_slice().try_into().unwrap();
         let entry_point = "test-entry-point-package";
         let maybe_entity_version = Some(23);
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByPackageHash {
                 addr: package_addr,
                 version: maybe_entity_version,
             },
-            runtime: TransactionRuntime::VmCasperV1,
+            runtime: params,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -998,45 +1291,48 @@ mod transaction {
             receipt: SAMPLE_DIGEST,
             additional_computation_factor: "",
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
-
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::Package {
             package_hash: package_addr.into(),
             entry_point,
             maybe_entity_version,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "package");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "package");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Custom("test-entry-point-package".to_string())
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
         );
     }
+
     #[test]
     fn should_create_package_alias_transaction() {
         let package_name = String::from("package-name");
         let entry_point = "test-entry-point-package";
         let maybe_entity_version = Some(23);
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByPackageName {
                 name: package_name.clone(),
                 version: maybe_entity_version,
             },
-            runtime: TransactionRuntime::VmCasperV1,
+            runtime: params,
         };
         let transaction_string_params = TransactionStrParams {
             secret_key: "",
@@ -1053,29 +1349,31 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::PackageAlias {
             package_alias: &package_name,
             entry_point,
             maybe_entity_version,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "package");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "package");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Custom("test-entry-point-package".to_string())
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
@@ -1085,9 +1383,10 @@ mod transaction {
     fn should_create_session_transaction() {
         let transaction_bytes = Bytes::from(vec![1u8; 32]);
         let is_install_upgrade = true;
+        let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Session {
             is_install_upgrade,
-            runtime: TransactionRuntime::VmCasperV1,
+            runtime: params,
             module_bytes: transaction_bytes.clone(),
         };
         let transaction_string_params = TransactionStrParams {
@@ -1105,33 +1404,36 @@ mod transaction {
             additional_computation_factor: "0",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
+        let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
+            runtime: params,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "session");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "session");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Call
         );
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionTarget>(TARGET_MAP_KEY)
                 .unwrap(),
             *target
         );
     }
+
     #[test]
     fn should_create_transfer_transaction() {
         let source_uref = URef::from_formatted_str(
@@ -1147,7 +1449,7 @@ mod transaction {
 
         let maybe_source = Some(source_uref);
 
-        let source_uref_cl = &CLValue::from_t(Some(&source_uref)).unwrap();
+        let source_uref_cl = &CLValue::from_t(source_uref).unwrap();
         let target_uref_cl = &CLValue::from_t(target_uref).unwrap();
 
         let transaction_string_params = TransactionStrParams {
@@ -1165,6 +1467,9 @@ mod transaction {
             additional_computation_factor: "1",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Transfer {
@@ -1176,35 +1481,45 @@ mod transaction {
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
         assert!(transaction.is_ok(), "{:?}", transaction);
-        assert_eq!(transaction.as_ref().unwrap().chain_name(), "transfer");
+        let transaction_v1 = unwrap_transaction(transaction);
+        assert_eq!(transaction_v1.chain_name(), "transfer");
         assert_eq!(
-            transaction
-                .as_ref()
-                .unwrap()
+            transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(ENTRY_POINT_MAP_KEY)
                 .unwrap(),
             TransactionEntryPoint::Transfer
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("source")
                 .unwrap(),
             source_uref_cl
         );
         assert_eq!(
-            transaction
-                .as_ref()
+            transaction_v1
+                .deserialize_field::<TransactionArgs>(ARGS_MAP_KEY)
                 .unwrap()
-                .deserialize_field::<RuntimeArgs>(ARGS_MAP_KEY)
+                .into_named()
                 .unwrap()
                 .get("target")
                 .unwrap(),
             target_uref_cl
         );
+    }
+
+    fn unwrap_transaction(
+        transaction: Result<casper_types::Transaction, CliError>,
+    ) -> casper_types::TransactionV1 {
+        match transaction.unwrap() {
+            casper_types::Transaction::Deploy(_) => {
+                unreachable!("Expected transaction, got deploy")
+            }
+            casper_types::Transaction::V1(transaction_v1) => transaction_v1,
+        }
     }
     #[test]
     fn should_fail_to_create_transaction_with_no_secret_or_public_key() {
@@ -1223,6 +1538,9 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_builder_params = TransactionBuilderParams::Transfer {
             maybe_source: Default::default(),
@@ -1262,13 +1580,17 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
             delegation_rate: 0,
             amount: U512::from(10),
-            minimum_delegation_amount,
-            maximum_delegation_amount,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: None,
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1296,13 +1618,17 @@ mod transaction {
             additional_computation_factor: "",
             receipt: SAMPLE_DIGEST,
             standard_payment: "true",
+            transferred_value: "0",
+            session_entry_point: None,
+            chunked_args: None,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
             delegation_rate: 0,
             amount: U512::from(10),
-            minimum_delegation_amount,
-            maximum_delegation_amount,
+            minimum_delegation_amount: Some(minimum_delegation_amount),
+            maximum_delegation_amount: Some(maximum_delegation_amount),
+            reserved_slots: Some(0),
         };
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, false);

@@ -5,20 +5,21 @@ use crate::rpcs::v2_0_0::speculative_exec_transaction::SpeculativeExecTxnResult;
 #[cfg(feature = "std-fs-io")]
 use crate::speculative_exec_txn;
 use crate::{
-    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams},
+    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams, TransactionV1Builder},
     put_transaction as put_transaction_rpc_handler,
     rpcs::results::PutTransactionResult,
     SuccessResponse,
 };
 use casper_types::{
-    Digest, InitiatorAddr, SecretKey, Transaction, TransactionV1, TransactionV1Builder,
+    Digest, InitiatorAddr, SecretKey, Transaction, TransactionArgs, TransactionEntryPoint,
+    TransactionRuntimeParams,
 };
 
 pub fn create_transaction(
     builder_params: TransactionBuilderParams,
     transaction_params: TransactionStrParams,
     allow_unsigned_transaction: bool,
-) -> Result<TransactionV1, CliError> {
+) -> Result<Transaction, CliError> {
     let chain_name = transaction_params.chain_name.to_string();
 
     let maybe_secret_key = get_maybe_secret_key(
@@ -30,6 +31,8 @@ pub fn create_transaction(
     let timestamp = parse::timestamp(transaction_params.timestamp)?;
     let ttl = parse::ttl(transaction_params.ttl)?;
     let maybe_session_account = parse::session_account(&transaction_params.initiator_addr)?;
+
+    let is_v2_wasm = matches!(&builder_params, TransactionBuilderParams::Session { runtime, .. } if matches!(runtime, &TransactionRuntimeParams::VmCasperV2 { .. }));
 
     let mut transaction_builder = make_transaction_builder(builder_params)?;
 
@@ -44,6 +47,7 @@ pub fn create_transaction(
             error: "pricing_mode is required to be non empty".to_string(),
         });
     }
+
     let pricing_mode = if transaction_params.pricing_mode.to_lowercase().as_str() == "reserved" {
         let digest = Digest::from_hex(transaction_params.receipt).map_err(|error| {
             CliError::FailedToParseDigest {
@@ -76,11 +80,27 @@ pub fn create_transaction(
     let maybe_json_args = parse::args_json::session::parse(transaction_params.session_args_json)?;
     let maybe_simple_args =
         parse::arg_simple::session::parse(&transaction_params.session_args_simple)?;
+    let chunked = transaction_params.chunked_args;
 
-    let args = parse::args_from_simple_or_json(maybe_simple_args, maybe_json_args);
-    if !args.is_empty() {
-        transaction_builder = transaction_builder.with_runtime_args(args);
+    let args = parse::args_from_simple_or_json(maybe_simple_args, maybe_json_args, chunked);
+    match args {
+        TransactionArgs::Named(named_args) => {
+            if !named_args.is_empty() {
+                transaction_builder = transaction_builder.with_runtime_args(named_args);
+            }
+        }
+        TransactionArgs::Bytesrepr(chunked_args) => {
+            transaction_builder = transaction_builder.with_chunked_args(chunked_args);
+        }
     }
+
+    if is_v2_wasm {
+        if let Some(entry_point) = transaction_params.session_entry_point {
+            transaction_builder = transaction_builder
+                .with_entry_point(TransactionEntryPoint::Custom(entry_point.to_owned()));
+        }
+    }
+
     if let Some(secret_key) = &maybe_secret_key {
         transaction_builder = transaction_builder.with_secret_key(secret_key);
     }
@@ -91,7 +111,7 @@ pub fn create_transaction(
     }
 
     let txn = transaction_builder.build().map_err(crate::Error::from)?;
-    Ok(txn)
+    Ok(Transaction::V1(txn))
 }
 
 /// Creates a [`Transaction`] and outputs it to a file or stdout if the `std-fs-io` feature is enabled.
@@ -108,7 +128,7 @@ pub fn make_transaction(
     builder_params: TransactionBuilderParams,
     transaction_params: TransactionStrParams<'_>,
     #[allow(unused_variables)] force: bool,
-) -> Result<TransactionV1, CliError> {
+) -> Result<Transaction, CliError> {
     let transaction = create_transaction(builder_params, transaction_params.clone(), true)?;
     #[cfg(feature = "std-fs-io")]
     {
@@ -133,14 +153,9 @@ pub async fn put_transaction(
     let rpc_id = parse::rpc_id(rpc_id_str);
     let verbosity_level = parse::verbosity(verbosity_level);
     let transaction = create_transaction(builder_params, transaction_params, false)?;
-    put_transaction_rpc_handler(
-        rpc_id,
-        node_address,
-        verbosity_level,
-        Transaction::V1(transaction),
-    )
-    .await
-    .map_err(CliError::from)
+    put_transaction_rpc_handler(rpc_id, node_address, verbosity_level, transaction)
+        .await
+        .map_err(CliError::from)
 }
 ///
 /// Reads a previously-saved [`TransactionV1`] from a file and sends it to the network for execution.
@@ -158,14 +173,9 @@ pub async fn send_transaction_file(
     let rpc_id = parse::rpc_id(rpc_id_str);
     let verbosity_level = parse::verbosity(verbosity_level);
     let transaction = read_transaction_file(input_path)?;
-    put_transaction_rpc_handler(
-        rpc_id,
-        node_address,
-        verbosity_level,
-        Transaction::V1(transaction),
-    )
-    .await
-    .map_err(CliError::from)
+    put_transaction_rpc_handler(rpc_id, node_address, verbosity_level, transaction)
+        .await
+        .map_err(CliError::from)
 }
 
 ///
@@ -184,14 +194,9 @@ pub async fn speculative_send_transaction_file(
     let rpc_id = parse::rpc_id(rpc_id_str);
     let verbosity_level = parse::verbosity(verbosity_level);
     let transaction = read_transaction_file(input_path).unwrap();
-    speculative_exec_txn(
-        rpc_id,
-        node_address,
-        verbosity_level,
-        Transaction::V1(transaction),
-    )
-    .await
-    .map_err(CliError::from)
+    speculative_exec_txn(rpc_id, node_address, verbosity_level, transaction)
+        .await
+        .map_err(CliError::from)
 }
 
 /// Reads a previously-saved [`TransactionV1`] from a file, cryptographically signs it, and outputs it to a
@@ -223,6 +228,7 @@ pub fn make_transaction_builder(
             amount,
             minimum_delegation_amount,
             maximum_delegation_amount,
+            reserved_slots,
         } => {
             let transaction_builder = TransactionV1Builder::new_add_bid(
                 public_key,
@@ -230,6 +236,7 @@ pub fn make_transaction_builder(
                 amount,
                 minimum_delegation_amount,
                 maximum_delegation_amount,
+                reserved_slots,
             )?;
             Ok(transaction_builder)
         }
@@ -264,19 +271,25 @@ pub fn make_transaction_builder(
         TransactionBuilderParams::InvocableEntity {
             entity_hash,
             entry_point,
+            runtime,
         } => {
-            let transaction_builder =
-                TransactionV1Builder::new_targeting_invocable_entity(entity_hash, entry_point);
+            let transaction_builder = TransactionV1Builder::new_targeting_invocable_entity(
+                entity_hash,
+                entry_point,
+                runtime,
+            );
             Ok(transaction_builder)
         }
         TransactionBuilderParams::InvocableEntityAlias {
             entity_alias,
             entry_point,
+            runtime,
         } => {
             let transaction_builder =
                 TransactionV1Builder::new_targeting_invocable_entity_via_alias(
                     entity_alias,
                     entry_point,
+                    runtime,
                 );
             Ok(transaction_builder)
         }
@@ -284,11 +297,13 @@ pub fn make_transaction_builder(
             package_hash,
             maybe_entity_version,
             entry_point,
+            runtime,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_package(
                 package_hash,
                 maybe_entity_version,
                 entry_point,
+                runtime,
             );
             Ok(transaction_builder)
         }
@@ -296,20 +311,25 @@ pub fn make_transaction_builder(
             package_alias,
             maybe_entity_version,
             entry_point,
+            runtime,
         } => {
-            let transaction_builder = TransactionV1Builder::new_targeting_package_via_alias(
-                package_alias,
-                maybe_entity_version,
-                entry_point,
-            );
+            let new_targeting_package_via_alias =
+                TransactionV1Builder::new_targeting_package_via_alias(
+                    package_alias,
+                    maybe_entity_version,
+                    entry_point,
+                    runtime,
+                );
+            let transaction_builder = new_targeting_package_via_alias;
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Session {
             is_install_upgrade,
             transaction_bytes,
+            runtime,
         } => {
             let transaction_builder =
-                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes);
+                TransactionV1Builder::new_session(is_install_upgrade, transaction_bytes, runtime);
             Ok(transaction_builder)
         }
         TransactionBuilderParams::Transfer {
@@ -325,6 +345,30 @@ pub fn make_transaction_builder(
         }
         TransactionBuilderParams::WithdrawBid { public_key, amount } => {
             let transaction_builder = TransactionV1Builder::new_withdraw_bid(public_key, amount)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::ActivateBid { validator } => {
+            let transaction_builder = TransactionV1Builder::new_activate_bid(validator)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::ChangeBidPublicKey {
+            public_key,
+            new_public_key,
+        } => {
+            let transaction_builder =
+                TransactionV1Builder::new_change_bid_public_key(public_key, new_public_key)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::AddReservations { reservations } => {
+            let transaction_builder = TransactionV1Builder::new_add_reservations(reservations)?;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::CancelReservations {
+            validator,
+            delegators,
+        } => {
+            let transaction_builder =
+                TransactionV1Builder::new_cancel_reservations(validator, delegators)?;
             Ok(transaction_builder)
         }
     }
